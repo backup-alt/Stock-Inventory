@@ -1,0 +1,14 @@
+{
+  "title": "Packaging Inventory",
+  "description": "Packaging materials - bags and rolls.",
+  "breadcrumb": ["Stock", "Packaging"],
+  "rolls": [
+    { "productGroup": "TATA CRYSTAL 1KG", "quantity": 21118.5, "unit": "Kg", "status": "in-stock" },
+    { "productGroup": "STILT 1/2 KG FF", "quantity": 450, "unit": "Kg", "status": "in-stock" },
+    { "productGroup": "STILT 1 KG FF", "quantity": 0, "unit": "Kg", "status": "out-of-stock" }
+  ],
+  "bags": [
+    { "productGroup": "WHITE NORMAL FF", "quantity": 22270, "unit": "Piece", "status": "in-stock" },
+    { "productGroup": "WHITE LAMINATE FF", "quantity": 9500, "unit": "Piece", "status": "in-stock" }
+  ]
+}

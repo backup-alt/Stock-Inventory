@@ -1,0 +1,11 @@
+{
+  "title": "Crystalline Industrial Inventory",
+  "description": "Industrial grade crystalline salt stock.",
+  "breadcrumb": ["Stock", "Crystalline"],
+  "items": [
+    { "productGroup": "STILT 1 KG CRYSTAL", "quantity": 11321, "unit": "Piece", "status": "in-stock" },
+    { "productGroup": "LAVAN 1 KG CRYSTAL", "quantity": 10301, "unit": "Piece", "status": "in-stock" },
+    { "productGroup": "INDUS 1 KG CRYSTAL", "quantity": 0, "unit": "Piece", "status": "out-of-stock" },
+    { "productGroup": "SABARI 1 KG CRYSTAL", "quantity": 55, "unit": "Piece", "status": "low-stock" }
+  ]
+}
