@@ -52,31 +52,23 @@
 
       <h1 class="text-2xl font-bold text-on-surface mb-4 px-2">{{data.title}}</h1>
 
-      <!-- Data Table -->
-      <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-outline-variant/50 overflow-hidden">
-        <!-- Table Header -->
-        <div class="grid grid-cols-12 gap-2 p-4 bg-surface-container-low border-b border-outline-variant/50 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">
-          <div class="col-span-6">Product Group</div>
-          <div class="col-span-3 text-right">Quantity</div>
-          <div class="col-span-3 pl-2">Unit</div>
-        </div>
-        <!-- Table Rows -->
-        <div class="divide-y divide-outline-variant/30">
-          <div *ngFor="let item of data.items"
-               class="grid grid-cols-12 gap-2 p-4 items-center transition-colors"
-               [class.hover:bg-surface-container-low/50]="item.status !== 'critical'"
-               [class.bg-error-container/30]="item.status === 'critical'"
-               [class.border-l-4]="item.status === 'critical'"
-               [class.border-error]="item.status === 'critical'">
-            <div class="col-span-6 font-body-md text-on-surface">{{item.productGroup}}</div>
-            <div class="col-span-3 text-right font-headline-md text-headline-md"
-                 [class.text-error]="item.status === 'critical'"
-                 [class.text-on-surface]="item.status !== 'critical'">{{item.quantity | number}}</div>
-            <div class="col-span-3 pl-2 font-body-md"
-                 [class.text-error]="item.status === 'critical'"
-                 [class.text-on-surface-variant]="item.status !== 'critical'">{{item.unit}}</div>
+      <div class="grid gap-3">
+        <article *ngFor="let item of data.items"
+                 class="rounded-xl border border-outline-variant/50 bg-surface-container-lowest p-4 shadow-soft">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">{{item.category || item.subLabel || 'Stock Entry'}}</p>
+              <h2 class="mt-1 font-label-bold text-on-surface break-words">{{item.productGroup}}</h2>
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="font-headline-md text-headline-md text-on-surface">{{item.quantity | number}}</p>
+              <p class="text-[11px] font-semibold text-on-surface-variant">{{item.unit}}</p>
+            </div>
           </div>
-        </div>
+          <div class="mt-3 rounded-md bg-surface-container-high px-3 py-2">
+            <p class="text-[12px] font-semibold text-on-surface-variant break-words">Note: {{item.note || 'API report'}}</p>
+          </div>
+        </article>
       </div>
     </ng-container>
   </main>

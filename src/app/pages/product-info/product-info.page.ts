@@ -120,7 +120,7 @@ export class ProductInfoPage implements OnInit {
       unit,
       note: this.updateNote
     }).subscribe({
-      next: () => {
+      next: (response) => {
         const item = this.productEntryMode === 'custom'
           ? this.insertCustomItem(category, productName, quantity, unit)
           : existingItem;
@@ -131,14 +131,19 @@ export class ProductInfoPage implements OnInit {
           return;
         }
 
-        item.quantity = quantity;
-        item.status = this.statusFromQuantity(quantity);
+        const savedUpdate = response.data;
+        item.quantity = savedUpdate.quantity;
+        item.unit = savedUpdate.unit;
+        item.status = this.statusFromQuantity(savedUpdate.quantity);
         const entry: RecentEntry = {
           type: 'inbound',
-          label: 'Manual inventory update',
+          label: savedUpdate.productGroup,
+          category: savedUpdate.category,
+          productName: savedUpdate.productGroup,
           date: 'Just now',
-          quantity: `${item.quantity} ${item.unit}`,
-          source: `${category.title}${this.updateNote ? ` - ${this.updateNote}` : ''}`,
+          quantity: `${savedUpdate.quantity} ${savedUpdate.unit}`,
+          note: savedUpdate.note || 'Owner inventory update',
+          source: savedUpdate.category,
           icon: 'edit'
         };
         this.data!.recentEntries = [

@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { DataService } from '../../core/services/data.service';
-import { InventoryTableItem, PackagingInventoryData } from '../../core/models/inventory.models';
+import { DateFilterService } from '../../core/services/date-filter.service';
+import { DatePeriod, InventoryTableItem, PackagingInventoryData } from '../../core/models/inventory.models';
 import { filter } from 'rxjs';
 
 type PackagingViewMode = 'all' | 'rolls' | 'bags';
@@ -23,13 +24,18 @@ export class InventoryPackagingPage implements OnInit {
   hasError = false;
   viewMode: PackagingViewMode = 'all';
   displayRows: PackagingDisplayRow[] = [];
+  activePeriod: DatePeriod = 'daily';
+  currentDate = '';
 
   constructor(
     private dataService: DataService,
-    private router: Router
+    private router: Router,
+    private dateFilter: DateFilterService
   ) {}
 
   ngOnInit() {
+    this.activePeriod = this.dateFilter.getCurrentPeriod();
+    this.currentDate = this.dateFilter.getFormattedDate(this.activePeriod);
     this.setViewMode(this.router.url);
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
@@ -38,6 +44,12 @@ export class InventoryPackagingPage implements OnInit {
         this.refreshDisplayRows();
       });
     this.loadData();
+  }
+
+  setPeriod(period: string) {
+    this.activePeriod = period as DatePeriod;
+    this.dateFilter.setPeriod(this.activePeriod);
+    this.currentDate = this.dateFilter.getFormattedDate(this.activePeriod);
   }
 
   loadData(refresher?: any) {

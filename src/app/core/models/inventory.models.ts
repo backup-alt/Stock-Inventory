@@ -124,8 +124,11 @@ export interface ProductHero {
 export interface RecentEntry {
   type: EntryType;
   label: string;
+  category?: string;
+  productName?: string;
   date: string;
   quantity: string;
+  note?: string;
   source: string;
   icon: string;
 }
@@ -180,7 +183,9 @@ export interface ProductInfoData {
 // ===== Inventory Tables (shared by multiple pages) =====
 export interface InventoryTableItem {
   productGroup: string;
+  category?: string;
   subLabel?: string | null;
+  note?: string;
   quantity: number;
   unit: string;
   status: string;

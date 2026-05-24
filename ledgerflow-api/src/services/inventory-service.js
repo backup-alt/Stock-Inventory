@@ -150,6 +150,16 @@ export class InventoryService {
     };
   }
 
+  async recentUpdates(limit = undefined) {
+    await this.ensureUpdatesLoaded();
+
+    if (typeof limit === 'number') {
+      return this.updates.slice(0, limit);
+    }
+
+    return [...this.updates];
+  }
+
   async stockSource() {
     return this.store.source('getStockReports.json');
   }

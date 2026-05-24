@@ -52,6 +52,20 @@
         </div>
         <h1 class="font-headline-lg text-headline-lg text-on-surface">{{pageTitle}}</h1>
         <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">{{pageDescription}}</p>
+        <div class="flex flex-col items-center gap-2 w-full">
+          <div class="flex items-center justify-center w-full max-w-[360px] bg-surface-container p-1 rounded-full border border-outline-variant/30">
+            <button *ngFor="let period of ['Daily','Weekly','Monthly']"
+                    class="flex-1 px-4 py-1.5 rounded-full font-label-bold text-label-bold text-center transition-colors"
+                    [class.bg-surface-container-lowest]="activePeriod === period.toLowerCase()"
+                    [class.shadow-sm]="activePeriod === period.toLowerCase()"
+                    [class.border]="activePeriod === period.toLowerCase()"
+                    [class.border-outline-variant/20]="activePeriod === period.toLowerCase()"
+                    [class.text-on-surface]="activePeriod === period.toLowerCase()"
+                    [class.text-on-surface-variant]="activePeriod !== period.toLowerCase()"
+                    (click)="setPeriod(period.toLowerCase())">{{period}}</button>
+          </div>
+          <p class="font-label-bold text-[12px] text-on-surface-variant">{{currentDate}}</p>
+        </div>
       </div>
 
       <div class="bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/40 shadow-soft">

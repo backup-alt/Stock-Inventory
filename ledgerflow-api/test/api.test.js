@@ -136,6 +136,31 @@ test('inventory updates are persisted to json and loaded by a new server', async
   assert.equal(customItem.quantity, 24);
 });
 
+test('product info recent entries include owner inventory updates', async () => {
+  const productGroup = 'Recent Owner Consumable';
+  await fetchApi('/api/inventory/updates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      category: 'Consumables',
+      productGroup,
+      quantity: 18,
+      unit: 'kg',
+      note: 'Visible recent card',
+    }),
+  });
+  const response = await fetchApi('/api/products/info');
+  const payload = await response.json();
+  const [entry] = payload.recentEntries;
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.recentEntries.length, 4);
+  assert.equal(entry.category, 'Consumables');
+  assert.equal(entry.productName, productGroup);
+  assert.equal(entry.quantity, '18 kg');
+  assert.equal(entry.note, 'Visible recent card');
+});
+
 test('future report dates are rejected', async () => {
   const response = await fetchApi('/api/reports/overall?period=daily&date=2999-01-01');
   const payload = await response.json();

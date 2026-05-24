@@ -79,7 +79,7 @@
           <a routerLink="/tabs/recent-entries" class="text-primary font-label-bold hover:underline cursor-pointer">View All</a>
         </div>
         <div class="grid gap-3">
-          <div *ngFor="let entry of data.recentEntries; let last = last"
+          <div *ngFor="let entry of data.recentEntries | slice:0:4"
                class="rounded-lg border border-outline-variant/40 bg-surface-container-lowest p-3 sm:p-4">
             <div class="flex items-start gap-3">
               <div class="w-11 h-11 rounded-lg flex shrink-0 items-center justify-center"
@@ -92,17 +92,18 @@
               <div class="min-w-0 flex-1">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div class="min-w-0">
-                    <p class="font-label-bold text-on-surface break-words">{{entry.label}}</p>
-                    <p class="text-label-bold text-on-surface-variant">{{entry.date}}</p>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">{{entry.category || entry.source}}</p>
+                    <p class="font-label-bold text-on-surface break-words">{{entry.productName || entry.label}}</p>
                   </div>
                   <div class="sm:text-right">
                     <p class="font-label-bold whitespace-nowrap"
                        [class.text-primary]="entry.type === 'inbound'"
                        [class.text-error]="entry.type === 'outbound'">{{entry.quantity}}</p>
+                    <p class="text-[11px] font-semibold text-on-surface-variant">{{entry.date}}</p>
                   </div>
                 </div>
-                <div class="mt-2 inline-flex max-w-full rounded-full bg-surface-container-high px-2.5 py-1">
-                  <p class="text-[11px] font-semibold text-on-surface-variant truncate">{{entry.source}}</p>
+                <div class="mt-2 rounded-md bg-surface-container-high px-2.5 py-2">
+                  <p class="text-[12px] font-semibold text-on-surface-variant break-words">Note: {{entry.note || entry.source}}</p>
                 </div>
               </div>
             </div>

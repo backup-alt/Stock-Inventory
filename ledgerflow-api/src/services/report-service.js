@@ -161,6 +161,7 @@ export class ReportService {
     ]);
     const reports = summary.data.reports || {};
     const productionTotal = totalQuantity(reports.production || []);
+    const recentUpdates = await this.inventoryService.recentUpdates(4);
 
     return {
       hero: {
@@ -174,7 +175,7 @@ export class ReportService {
           unit: 'Units',
         },
       },
-      recentEntries: recentStockEntries(reports.stockEntry || []),
+      recentEntries: recentStockEntries(reports.stockEntry || [], recentUpdates, 4),
       inventoryCategories: await productCategories(stock, this.inventoryService),
     };
   }
@@ -186,7 +187,8 @@ export class ReportService {
 
   async recentEntries() {
     const summary = await this.summarySource();
-    return this.tableReport('Recent Stock Entries', 'Report > Recent Stock Entries', summary.data.reports.stockEntry || []);
+    const updates = await this.inventoryService.recentUpdates();
+    return recentEntriesReport('Recent Stock Entries', 'Report > Recent Stock Entries', summary.data.reports.stockEntry || [], updates);
   }
 
   async summarySource() {
@@ -278,15 +280,82 @@ function productInfoItem(name, quantity, unit) {
   };
 }
 
-function recentStockEntries(rows) {
-  return rows.slice(0, 5).map((row, index) => ({
+function recentStockEntries(rows, updates = [], limit = 4) {
+  const ownerEntries = updates.map((update) => ({
     type: 'inbound',
-    label: `Stock entry - ${cleanText(row.productGroup || row.productName || `Entry ${index + 1}`)}`,
+    label: cleanText(update.productGroup),
+    category: cleanText(update.category),
+    productName: cleanText(update.productGroup),
+    date: formatEntryDate(update.createdAt),
+    quantity: `${numberOrZero(update.quantity).toLocaleString('en-US')} ${shortUnit(update.unit)}`,
+    note: cleanText(update.note || 'Owner inventory update'),
+    source: cleanText(update.category),
+    icon: 'edit',
+  }));
+  const apiEntries = rows.map((row, index) => ({
+    type: 'inbound',
+    label: cleanText(row.productGroup || row.productName || `Entry ${index + 1}`),
+    category: cleanText(row.productName || 'Stock Entry'),
+    productName: cleanText(row.productGroup || row.productName || `Entry ${index + 1}`),
     date: 'Live snapshot',
-    quantity: `+${numberOrZero(row.quantity).toLocaleString('en-US')} ${shortUnit(row.unit)}`,
+    quantity: `${numberOrZero(row.quantity).toLocaleString('en-US')} ${shortUnit(row.unit)}`,
+    note: cleanText(row.plantName && row.plantName !== 'N/A' ? row.plantName : 'API report'),
     source: cleanText(row.plantName || 'API report'),
     icon: 'add_circle',
   }));
+
+  return [...ownerEntries, ...apiEntries].slice(0, limit);
+}
+
+function recentEntriesReport(title, description, rows, updates = []) {
+  const updateItems = updates.map((update) => ({
+    productGroup: cleanText(update.productGroup),
+    category: cleanText(update.category),
+    note: cleanText(update.note || 'Owner inventory update'),
+    subLabel: cleanText(update.category),
+    quantity: numberOrZero(update.quantity),
+    unit: shortUnit(update.unit),
+    status: stockStatus(update.quantity),
+  }));
+  const apiItems = rows.map((row) => {
+    const quantity = numberOrZero(row.quantity);
+
+    return {
+      productGroup: cleanText(row.productGroup || row.productName),
+      category: cleanText(row.productName || 'Stock Entry'),
+      note: cleanText(row.plantName && row.plantName !== 'N/A' ? row.plantName : 'API report'),
+      subLabel: cleanText(row.productName),
+      quantity,
+      unit: shortUnit(row.unit),
+      status: stockStatus(quantity),
+    };
+  });
+
+  return {
+    title,
+    description,
+    breadcrumb: description.split('>').map((item) => item.trim()),
+    items: [...updateItems, ...apiItems],
+  };
+}
+
+function formatEntryDate(value) {
+  if (!value) {
+    return 'Just now';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Just now';
+  }
+
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 function stockCard(title, value, unit) {
