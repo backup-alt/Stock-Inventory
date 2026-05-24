@@ -123,9 +123,9 @@
               <h3 class="font-label-bold text-label-bold uppercase tracking-wider text-on-surface-variant">{{category.title}}</h3>
             </div>
             <div class="divide-y divide-outline-variant/30">
-              <div *ngFor="let item of category.items" class="px-4 py-3 flex justify-between items-center">
-                <span class="font-body-md text-on-surface">{{item.name}}</span>
-                <div class="flex items-center gap-4">
+              <div *ngFor="let item of category.items | slice:0:5" class="px-4 py-3 flex items-start justify-between gap-3">
+                <span class="font-body-md text-on-surface min-w-0 break-words">{{item.name}}</span>
+                <div class="flex shrink-0 items-center gap-3">
                   <span class="font-body-md font-semibold" [class.text-on-surface-variant]="item.status !== 'critical'" [class.text-error]="item.status === 'critical'">
                     {{item.quantity}} {{item.unit}}
                   </span>
@@ -135,6 +135,9 @@
             </div>
             <!-- View All button per category -->
             <div class="px-4 pb-4 mt-2">
+              <p *ngIf="category.items.length > 5" class="font-body-md text-[12px] text-on-surface-variant mb-2">
+                Showing 5 of {{category.items.length}} items
+              </p>
               <a [routerLink]="getCategoryRoute(category.title)"
                  class="block w-full py-3 px-4 border border-outline-variant rounded-md text-primary font-semibold text-body-md hover:bg-surface-container-high transition-colors text-center cursor-pointer">
                 View all

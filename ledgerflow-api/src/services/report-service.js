@@ -1,6 +1,7 @@
 import { dataForPeriod, labelsForPeriod, parseReportFilter } from '../domain/periods.js';
 import { statusColor, stockStatus } from '../domain/status.js';
-import { cleanText, numberOrZero } from '../domain/strings.js';
+import { cleanText, numberOrZero, shortUnit } from '../domain/strings.js';
+import { rawSaltStock } from '../domain/stock-source.js';
 
 export class ReportService {
   constructor(store, inventoryService) {
@@ -15,6 +16,7 @@ export class ReportService {
     ]);
     const lowStock = await this.lowStockItems(stock);
     const totals = stockTotals(stock);
+    const raw = rawSaltStock(stock);
     const reports = summary.data.reports || {};
 
     return {
@@ -22,10 +24,11 @@ export class ReportService {
       subtitle: 'Live warehouse status from the latest API reports.',
       kpis: [
         {
-          label: 'Total Stock (kg)',
-          value: compactNumber(totals.all),
+          label: 'Total Stock Weight',
+          value: totals.rawKg.toLocaleString('en-US'),
+          unit: 'kg',
           icon: 'inventory_2',
-          trend: { direction: 'up', percentage: 'Live' },
+          footer: `${numberOrZero(raw.qty).toLocaleString('en-US')} metric tons raw stock`,
         },
         {
           label: 'Orders Today',
@@ -51,7 +54,7 @@ export class ReportService {
       inventoryBreakdown: [
         {
           label: 'Raw Salt (MT)',
-          value: numberOrZero(stock.data.rawSaltStock?.qty),
+          value: numberOrZero(raw.qty),
           icon: 'landscape',
           color: 'secondary',
           alert: false,
@@ -138,7 +141,7 @@ export class ReportService {
     const filter = parseReportFilter(query);
     const source = await this.inventoryService.stockSource();
     const totals = stockTotals(source);
-    const raw = source.data.rawSaltStock;
+    const raw = rawSaltStock(source);
 
     return {
       title: 'Stock Report',
@@ -202,7 +205,7 @@ export class ReportService {
           productGroup: cleanText(row.productBrand || row.productGroup || row.productName),
           subLabel: cleanText(row.productBrand ? row.productGroup : row.productName),
           quantity,
-          unit: cleanText(row.unit),
+          unit: shortUnit(row.unit),
           status: stockStatus(quantity),
         };
       }),
@@ -219,7 +222,7 @@ export class ReportService {
         return {
           name: cleanText(product.productGroup),
           quantity,
-          unit: cleanText(product.unitName),
+          unit: shortUnit(product.unitName),
           type: stockStatus(quantity),
         };
       })
@@ -229,7 +232,7 @@ export class ReportService {
 }
 
 function productCategories(stock) {
-  const raw = stock.data.rawSaltStock || {};
+  const raw = rawSaltStock(stock);
   const categories = stock.data.inventory || [];
   const bundles = findCategory(categories, 'Bundle (unpacked)');
   const rolls = findCategory(categories, 'Roll');
@@ -270,7 +273,7 @@ function productInfoItem(name, quantity, unit) {
   return {
     name: cleanText(name),
     quantity: value,
-    unit: cleanText(unit),
+    unit: shortUnit(unit),
     status: uiStatus(stockStatus(value)),
   };
 }
@@ -280,7 +283,7 @@ function recentStockEntries(rows) {
     type: 'inbound',
     label: `Stock entry - ${cleanText(row.productGroup || row.productName || `Entry ${index + 1}`)}`,
     date: 'Live snapshot',
-    quantity: `+${numberOrZero(row.quantity).toLocaleString('en-US')} ${cleanText(row.unit)}`,
+    quantity: `+${numberOrZero(row.quantity).toLocaleString('en-US')} ${shortUnit(row.unit)}`,
     source: cleanText(row.plantName || 'API report'),
     icon: 'add_circle',
   }));
@@ -294,7 +297,7 @@ function stockCard(title, value, unit) {
   return {
     title,
     value: quantity.toLocaleString('en-US'),
-    unit,
+    unit: shortUnit(unit),
     status: color,
     trend: {
       direction: color === 'red' ? 'down' : 'up',
@@ -305,9 +308,11 @@ function stockCard(title, value, unit) {
 
 function stockTotals(stock) {
   const categories = stock.data.inventory || [];
+  const raw = rawSaltStock(stock);
 
   return {
-    all: allInventoryProducts(stock).reduce((sum, item) => sum + numberOrZero(item.qty), numberOrZero(stock.data.rawSaltStock?.qty)),
+    all: allInventoryProducts(stock).reduce((sum, item) => sum + numberOrZero(item.qty), numberOrZero(raw.qty)),
+    rawKg: numberOrZero(raw.qty) * 1000,
     bundles: totalProductQuantity(findCategory(categories, 'Bundle (unpacked)')),
     rolls: totalProductQuantity(findCategory(categories, 'Roll')),
     bags: totalProductQuantity(findCategory(categories, 'Bag (unpacked)')),
@@ -319,7 +324,7 @@ function topStockItems(stock) {
     .map((product) => ({
       name: cleanText(product.productGroup),
       quantity: numberOrZero(product.qty),
-      unit: cleanText(product.unitName),
+      unit: shortUnit(product.unitName),
       status: 'In Stock',
       icon: 'inventory_2',
     }))

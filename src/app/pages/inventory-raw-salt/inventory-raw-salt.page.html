@@ -80,19 +80,17 @@
             </thead>
             <tbody class="divide-y divide-outline-variant/20">
               <tr *ngFor="let item of data.items"
-                  [class.hover:bg-error-container/10]="item.status === 'out-of-stock'"
-                  [class.hover:bg-surface-container-low]="item.status !== 'out-of-stock'"
-                  class="transition-colors">
-                <td class="p-3 font-body-md font-semibold py-4"
-                    [class.text-on-surface]="item.status !== 'out-of-stock'">
+                  class="transition-colors hover:brightness-[0.98]"
+                  [class.bg-status-green-bg]="item.status === 'in-stock'"
+                  [class.bg-status-yellow-bg]="item.status === 'low-stock'"
+                  [class.bg-status-red-bg]="item.status === 'out-of-stock'">
+                <td class="p-3 font-body-md font-semibold py-4 text-on-surface">
                   <div class="flex items-center gap-1.5">
-                    <span *ngIf="item.status === 'out-of-stock'" class="material-symbols-outlined text-error text-[16px]">warning</span>
+                    <span *ngIf="item.status === 'out-of-stock'" class="material-symbols-outlined text-status-red-text text-[16px]">warning</span>
                     <span>{{item.productGroup}}</span>
                   </div>
                 </td>
-                <td class="p-3 font-headline-md text-right font-bold"
-                    [class.text-primary]="item.status !== 'out-of-stock'"
-                    [class.text-error]="item.status === 'out-of-stock'">{{item.quantity | number}}</td>
+                <td class="p-3 font-headline-md text-right font-bold text-on-surface">{{item.quantity | number}}</td>
                 <td class="p-3 font-body-md text-on-surface-variant text-sm">{{item.unit}}</td>
               </tr>
             </tbody>

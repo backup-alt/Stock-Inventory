@@ -57,7 +57,7 @@
       <div class="bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/40 shadow-soft">
         <table class="w-full table-fixed text-left border-collapse">
           <thead>
-            <tr class="bg-surface-container-low border-b border-surface-container text-on-surface-variant font-label-bold text-label-bold uppercase tracking-wider">
+            <tr class="bg-surface-container-low border-b border-surface-container text-on-surface-variant font-label-bold text-[10px] uppercase tracking-wide">
               <th class="py-3 px-2 w-[58%]">Product Group</th>
               <th class="py-3 px-2 text-right w-[24%]">Quantity</th>
               <th class="py-3 px-2 w-[18%]">Unit</th>
@@ -65,14 +65,16 @@
           </thead>
           <tbody class="font-body-md text-body-md text-on-surface divide-y divide-surface-container">
             <tr *ngFor="let row of displayRows"
-                class="transition-colors hover:bg-surface-container-low"
-                [class.bg-[#FEF2F2]]="row.item.status === 'out-of-stock'">
+                class="transition-colors hover:brightness-[0.98]"
+                [class.bg-status-green-bg]="row.item.status === 'in-stock'"
+                [class.bg-status-yellow-bg]="row.item.status === 'low-stock'"
+                [class.bg-status-red-bg]="row.item.status === 'out-of-stock'">
               <td class="py-3 px-2 text-on-surface-variant break-words">
-                <span *ngIf="row.item.status === 'out-of-stock'" class="material-symbols-outlined text-error text-[16px] align-middle mr-1">warning</span>
+                <span *ngIf="row.item.status === 'out-of-stock'" class="material-symbols-outlined text-status-red-text text-[16px] align-middle mr-1">warning</span>
                 {{row.item.productGroup}} <span class="text-outline">({{row.label}})</span>
               </td>
               <td class="py-3 px-2 text-right font-bold"
-                  [class.text-error]="row.item.status === 'out-of-stock'">{{row.item.quantity | number}}</td>
+                  [class.text-status-red-text]="row.item.status === 'out-of-stock'">{{row.item.quantity | number}}</td>
               <td class="py-3 px-2 text-on-surface-variant break-words">{{row.item.unit}}</td>
             </tr>
           </tbody>

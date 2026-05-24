@@ -99,13 +99,15 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <button *ngFor="let kpi of data.kpis"
                 type="button"
-                class="bg-surface-container-lowest rounded-md p-3 border border-outline-variant/40 shadow-soft flex flex-col justify-between text-left transition-all hover:border-primary/35 hover:bg-primary-container/10 active:scale-[0.98]"
+                class="bg-surface-container-lowest rounded-md p-3 border border-outline-variant/40 shadow-soft flex min-w-0 flex-col justify-between text-left transition-all hover:border-primary/35 hover:bg-primary-container/10 active:scale-[0.98]"
                 (click)="navigateKpi(kpi)">
           <div class="flex items-center justify-between mb-2">
             <span class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-[10px]">{{kpi.label}}</span>
             <span class="material-symbols-outlined text-primary bg-primary-container/20 rounded p-1">{{kpi.icon}}</span>
           </div>
-          <div class="font-kpi-display-mobile text-[28px] md:text-kpi-display text-on-surface leading-none font-extrabold">{{kpi.value}}</div>
+          <div class="font-kpi-display-mobile text-[24px] sm:text-[27px] md:text-kpi-display text-on-surface leading-tight font-extrabold break-words">
+            {{kpi.value}} <span *ngIf="kpi.unit" class="text-[12px] md:text-[15px] font-bold text-on-surface-variant">{{kpi.unit}}</span>
+          </div>
           <div class="flex items-center mt-2 pt-2 border-t border-surface-variant" *ngIf="kpi.trend">
             <span class="material-symbols-outlined text-[14px] text-primary">trending_up</span>
             <span class="font-body-md text-[12px] ml-1 font-semibold text-primary">{{kpi.trend.percentage}}</span>

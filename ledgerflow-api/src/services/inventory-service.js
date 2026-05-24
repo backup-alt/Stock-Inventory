@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { HttpError } from '../http/http-error.js';
-import { cleanText, numberOrZero, titleFromSlug } from '../domain/strings.js';
+import { cleanText, numberOrZero, shortUnit, titleFromSlug } from '../domain/strings.js';
+import { rawSaltStock } from '../domain/stock-source.js';
 import { stockStatus } from '../domain/status.js';
 
 const categoryTitles = {
@@ -29,14 +30,14 @@ export class InventoryService {
         name: cleanText(category.productName),
         productCount: products.length,
         totalQuantity,
-        unit: cleanText(products[0]?.unitName || ''),
+        unit: shortUnit(products[0]?.unitName || ''),
       };
     });
 
     return {
       success: true,
       data: {
-        rawSaltStock: source.data.rawSaltStock,
+        rawSaltStock: rawSaltStock(source),
         categories,
         updatedAt: new Date().toISOString(),
       },
@@ -66,7 +67,7 @@ export class InventoryService {
 
     if (slug === 'raw-salt') {
       const source = await this.stockSource();
-      const raw = source.data.rawSaltStock;
+      const raw = rawSaltStock(source);
 
       return this.tableFromRows(slug, [{
         productGroup: raw.productGroup,
@@ -182,7 +183,7 @@ export class InventoryService {
       productGroup: cleanText(item.productGroup),
       subLabel: item.subLabel ? cleanText(item.subLabel) : null,
       quantity,
-      unit: cleanText(item.unit),
+      unit: shortUnit(item.unit),
       status: stockStatus(quantity),
     };
   }

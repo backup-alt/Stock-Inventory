@@ -27,6 +27,7 @@ export class Tab1Page implements OnInit {
 
   private readonly demoValues: Record<DatePeriod, {
     kpis: Array<string | number>;
+    footers: string[];
     trends: string[];
     critical: number[];
     normal: number;
@@ -34,7 +35,8 @@ export class Tab1Page implements OnInit {
     subtitle: string;
   }> = {
     daily: {
-      kpis: ['300k', 42, 18, 3],
+      kpis: ['300,000', 42, 18, 3],
+      footers: ['300 metric tons raw stock'],
       trends: ['+2.4%'],
       critical: [91, 0],
       normal: 5400,
@@ -42,7 +44,8 @@ export class Tab1Page implements OnInit {
       subtitle: 'Here is your warehouse status for today.'
     },
     weekly: {
-      kpis: ['316k', 268, 113, 12],
+      kpis: ['316,000', 268, 113, 12],
+      footers: ['316 metric tons raw stock'],
       trends: ['+5.8%'],
       critical: [76, 4],
       normal: 6120,
@@ -50,7 +53,8 @@ export class Tab1Page implements OnInit {
       subtitle: 'Here is your warehouse status for the last 7 days.'
     },
     monthly: {
-      kpis: ['342k', 1134, 486, 31],
+      kpis: ['342,000', 1134, 486, 31],
+      footers: ['342 metric tons raw stock'],
       trends: ['+11.2%'],
       critical: [58, 9],
       normal: 7380,
@@ -194,6 +198,7 @@ export class Tab1Page implements OnInit {
     nextData.subtitle = demo.subtitle;
     nextData.kpis.forEach((kpi, index) => {
       kpi.value = demo.kpis[index] ?? kpi.value;
+      kpi.footer = demo.footers[index] ?? kpi.footer;
       if (kpi.trend && demo.trends[index]) {
         kpi.trend.percentage = demo.trends[index];
       }

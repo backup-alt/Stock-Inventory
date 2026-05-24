@@ -4,6 +4,21 @@ export function cleanText(value) {
     .trim();
 }
 
+export function shortUnit(value) {
+  const unit = cleanText(value);
+  const normalized = unit.toLowerCase();
+
+  if (normalized === 'kilogram' || normalized === 'kilograms') {
+    return 'kg';
+  }
+
+  if (normalized === 'metric ton' || normalized === 'metric tons') {
+    return 'MT';
+  }
+
+  return unit;
+}
+
 export function numberOrZero(value) {
   const nextValue = Number(value);
   return Number.isFinite(nextValue) ? nextValue : 0;

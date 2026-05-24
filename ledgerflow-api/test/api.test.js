@@ -40,6 +40,18 @@ test('packaging roll and bag inventory are separate categories', async () => {
   assert.notDeepEqual(rolls.items, bags.items);
 });
 
+test('dashboard explains raw stock weight without compact units', async () => {
+  const response = await fetchApi('/api/dashboard');
+  const payload = await response.json();
+  const [stockWeight] = payload.kpis;
+
+  assert.equal(response.status, 200);
+  assert.equal(stockWeight.label, 'Total Stock Weight');
+  assert.equal(stockWeight.value, '300,000');
+  assert.equal(stockWeight.unit, 'kg');
+  assert.equal(stockWeight.footer, '300 metric tons raw stock');
+});
+
 test('future report dates are rejected', async () => {
   const response = await fetchApi('/api/reports/overall?period=daily&date=2999-01-01');
   const payload = await response.json();

@@ -59,41 +59,27 @@
 
       <!-- Data Table -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden w-full mt-2">
-        <div class="table-container w-full overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[500px]">
+        <div class="w-full overflow-hidden">
+          <table class="w-full table-fixed text-left border-collapse">
             <thead class="bg-surface-container-low border-b border-outline-variant">
               <tr>
-                <th class="p-4 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider whitespace-nowrap">Product Group</th>
-                <th class="p-4 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider text-right whitespace-nowrap">Quantity</th>
-                <th class="p-4 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider whitespace-nowrap">Unit</th>
-                <th class="p-4 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider text-center whitespace-nowrap">Status</th>
+                <th class="p-3 font-label-bold text-[10px] text-on-surface-variant uppercase tracking-wide w-[56%]">Product Group</th>
+                <th class="p-3 font-label-bold text-[10px] text-on-surface-variant uppercase tracking-wide text-right w-[26%]">Quantity</th>
+                <th class="p-3 font-label-bold text-[10px] text-on-surface-variant uppercase tracking-wide w-[18%]">Unit</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-outline-variant">
               <tr *ngFor="let item of data.items"
-                  class="hover:bg-surface-container-low transition-colors"
-                  [class.bg-error-container/10]="item.status === 'out-of-stock'">
-                <td class="p-4 font-body-md font-medium whitespace-nowrap"
-                    [class.text-on-surface]="item.status !== 'out-of-stock'"
-                    [class.text-error]="item.status === 'out-of-stock'">{{item.productGroup}}</td>
-                <td class="p-4 font-body-md text-right whitespace-nowrap"
-                    [class.text-on-surface]="item.status !== 'out-of-stock'"
-                    [class.text-error]="item.status === 'out-of-stock'">{{item.quantity | number}}</td>
-                <td class="p-4 font-body-md whitespace-nowrap"
-                    [class.text-on-surface-variant]="item.status !== 'out-of-stock'"
-                    [class.text-error]="item.status === 'out-of-stock'">{{item.unit}}</td>
-                <td class="p-4 text-center whitespace-nowrap">
-                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded font-label-bold text-[10px] uppercase"
-                        [class.bg-status-green-bg]="item.status === 'in-stock'"
-                        [class.text-status-green-text]="item.status === 'in-stock'"
-                        [class.bg-status-yellow-bg]="item.status === 'low-stock'"
-                        [class.text-status-yellow-text]="item.status === 'low-stock'"
-                        [class.bg-error-container]="item.status === 'out-of-stock'"
-                        [class.text-on-error-container]="item.status === 'out-of-stock'">
-                    <span class="material-symbols-outlined text-[14px]">{{getStatusIcon(item.status)}}</span>
-                    {{getStatusLabel(item.status)}}
-                  </span>
+                  class="transition-colors hover:brightness-[0.98]"
+                  [class.bg-status-green-bg]="item.status === 'in-stock'"
+                  [class.bg-status-yellow-bg]="item.status === 'low-stock'"
+                  [class.bg-status-red-bg]="item.status === 'out-of-stock'">
+                <td class="p-3 py-4 font-body-md font-medium text-on-surface break-words">
+                  <span *ngIf="item.status === 'out-of-stock'" class="material-symbols-outlined text-status-red-text text-[16px] align-middle mr-1">warning</span>
+                  {{item.productGroup}}
                 </td>
+                <td class="p-3 py-4 font-body-md text-right font-bold whitespace-nowrap text-on-surface">{{item.quantity | number}}</td>
+                <td class="p-3 py-4 font-body-md text-on-surface-variant break-words">{{item.unit}}</td>
               </tr>
             </tbody>
           </table>
