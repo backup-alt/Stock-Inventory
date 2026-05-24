@@ -57,7 +57,7 @@
        (click)="toggleDrawer()"></div>
 
   <!-- Main Content -->
-  <div class="app-content">
+  <div class="app-content" [class.keyboard-active]="keyboardActive">
     <ion-tabs #tabs (ionTabsDidChange)="onTabChange($event)">
       <ion-tab-bar slot="bottom" style="display:none">
         <ion-tab-button *ngFor="let item of primaryNavItems" [tab]="item.route">
@@ -68,7 +68,8 @@
   </div>
 
   <!-- Bottom Navigation (Primary) -->
-  <nav class="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-outline-variant flex items-center justify-around px-2 z-50">
+  <nav class="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-outline-variant flex items-center justify-around px-2 z-50"
+       [class.mobile-nav-hidden]="keyboardActive">
     <button *ngFor="let item of primaryNavItems; let i = index"
             type="button"
             class="mobile-tab-item flex flex-col items-center gap-1 flex-1 cursor-pointer py-1"

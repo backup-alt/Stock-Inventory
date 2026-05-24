@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, ViewChild } from '@angular/core';
+import { Component, HostListener, NgZone, OnDestroy, ViewChild } from '@angular/core';
 import { IonTabs } from '@ionic/angular';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
@@ -21,9 +21,13 @@ export class TabsPage implements OnDestroy {
   showPrintOptions = false;
   showSavedPdfAction = false;
   printStatusMessage = '';
+  inputFocused = false;
+  viewportKeyboardOpen = false;
   private apiBaseUrl = environment.apiBaseUrl.replace(/\/$/, '');
   private apiKey = environment.apiKey;
   private routerSubscription: Subscription;
+  private initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  private visualViewportResizeHandler = () => this.handleViewportResize();
 
   primaryNavItems = [
     { icon: 'dashboard', label: 'Dashboard', route: 'dashboard' },
@@ -38,16 +42,21 @@ export class TabsPage implements OnDestroy {
     { icon: 'dashboard', label: 'Dashboard', route: 'dashboard' },
   ];
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private zone: NgZone
+  ) {
     this.checkScreenSize();
     this.syncActiveTab(this.router.url);
     this.routerSubscription = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event) => this.syncActiveTab(event.urlAfterRedirects));
+    window.visualViewport?.addEventListener('resize', this.visualViewportResizeHandler);
   }
 
   ngOnDestroy() {
     this.routerSubscription.unsubscribe();
+    window.visualViewport?.removeEventListener('resize', this.visualViewportResizeHandler);
   }
 
   @HostListener('window:resize')
@@ -55,9 +64,45 @@ export class TabsPage implements OnDestroy {
     this.checkScreenSize();
   }
 
+  @HostListener('document:focusin', ['$event'])
+  onDocumentFocusIn(event: FocusEvent) {
+    this.inputFocused = this.isEditableElement(event.target);
+  }
+
+  @HostListener('document:focusout')
+  onDocumentFocusOut() {
+    setTimeout(() => {
+      this.inputFocused = this.isEditableElement(document.activeElement);
+    }, 120);
+  }
+
+  get keyboardActive(): boolean {
+    return !this.isDesktop && (this.inputFocused || this.viewportKeyboardOpen);
+  }
+
   checkScreenSize() {
     this.isDesktop = window.innerWidth >= 768;
     this.drawerOpen = this.isDesktop;
+  }
+
+  private handleViewportResize() {
+    const viewport = window.visualViewport;
+
+    if (!viewport) {
+      return;
+    }
+
+    this.zone.run(() => {
+      this.viewportKeyboardOpen = !this.isDesktop && this.initialViewportHeight - viewport.height > 140;
+    });
+  }
+
+  private isEditableElement(target: EventTarget | Element | null): boolean {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    return Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
   }
 
   toggleDrawer() {
