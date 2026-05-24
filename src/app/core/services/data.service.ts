@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   DashboardData,
@@ -13,64 +13,55 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
-  private assetBaseUrl = 'assets/data/';
   private apiBaseUrl = environment.apiBaseUrl.replace(/\/$/, '');
 
   constructor(private http: HttpClient) {}
 
   getDashboard(): Observable<DashboardData> {
-    return this.getData<DashboardData>('/api/dashboard', 'dashboard.json');
+    return this.getData<DashboardData>('/api/dashboard');
   }
 
   getOverallReport(): Observable<OverallReportData> {
-    return this.getData<OverallReportData>('/api/reports/overall', 'overall-report.json');
+    return this.getData<OverallReportData>('/api/reports/overall');
   }
 
   getStockReport(): Observable<StockReportData> {
-    return this.getData<StockReportData>('/api/reports/stock', 'stock-report.json');
+    return this.getData<StockReportData>('/api/reports/stock');
   }
 
   getProductInfo(): Observable<ProductInfoData> {
-    return this.getData<ProductInfoData>('/api/products/info', 'product-info.json');
+    return this.getData<ProductInfoData>('/api/products/info');
   }
 
   getBundleInventory(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/inventory/bundles', 'inventory-bundles.json');
+    return this.getData<InventoryTableData>('/api/inventory/bundles');
   }
 
   getRawSaltInventory(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/inventory/raw-salt', 'inventory-raw-salt.json');
+    return this.getData<InventoryTableData>('/api/inventory/raw-salt');
   }
 
   getPackagingInventory(): Observable<PackagingInventoryData> {
-    return this.getData<PackagingInventoryData>('/api/inventory/packaging', 'inventory-packaging.json');
+    return this.getData<PackagingInventoryData>('/api/inventory/packaging');
   }
 
   getConsumablesInventory(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/inventory/consumables', 'inventory-consumables.json');
+    return this.getData<InventoryTableData>('/api/inventory/consumables');
   }
 
   getCrystallineInventory(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/inventory/crystalline', 'inventory-crystalline.json');
+    return this.getData<InventoryTableData>('/api/inventory/crystalline');
   }
 
   getProductionLog(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/reports/production-log', 'production-log.json');
+    return this.getData<InventoryTableData>('/api/reports/production-log');
   }
 
   getRecentEntries(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/reports/recent-entries', 'recent-entries.json');
+    return this.getData<InventoryTableData>('/api/reports/recent-entries');
   }
 
-  private getData<T>(apiPath: string, assetFile: string): Observable<T> {
-    const assetRequest = this.http.get<T>(`${this.assetBaseUrl}${assetFile}`);
-
-    if (!this.apiBaseUrl) {
-      return assetRequest;
-    }
-
-    return this.http.get<T>(`${this.apiBaseUrl}${apiPath}`).pipe(
-      catchError(() => assetRequest)
-    );
+  private getData<T>(apiPath: string): Observable<T> {
+    return this.http.get<T>(`${this.apiBaseUrl}${apiPath}`);
   }
 }

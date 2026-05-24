@@ -77,7 +77,7 @@ export class InventoryService {
 
     if (slug === 'crystalline') {
       const rows = await this.crystallineRows();
-      return rows.length ? this.tableFromRows(slug, rows) : this.store.ui('inventory-crystalline.json');
+      return this.tableFromRows(slug, rows);
     }
 
     throw new HttpError(404, 'Inventory category not found');

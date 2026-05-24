@@ -9,4 +9,12 @@ export const config = {
   port: Number(process.env.PORT || 8080),
   dataDir: process.env.LEDGERFLOW_DATA_DIR || resolve(rootDir, 'data'),
   maxBodyBytes: Number(process.env.MAX_BODY_BYTES || 1_000_000),
+  upstream: {
+    summaryReportsUrl: process.env.SUMMARY_REPORTS_URL || process.env.GET_SUMMARY_REPORTS_URL || '',
+    stockReportsUrl: process.env.STOCK_REPORTS_URL || process.env.GET_STOCK_REPORTS_URL || '',
+    apiKey: process.env.REPORTS_API_KEY || process.env.API_KEY || '',
+    apiKeyHeader: process.env.REPORTS_API_KEY_HEADER || 'Authorization',
+    apiKeyPrefix: process.env.REPORTS_API_KEY_PREFIX || 'Bearer',
+    timeoutMs: Number(process.env.REPORTS_TIMEOUT_MS || 10_000),
+  },
 };

@@ -2,6 +2,7 @@ import { Component, HostListener, OnDestroy, ViewChild } from '@angular/core';
 import { IonTabs } from '@ionic/angular';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-tabs',
@@ -20,6 +21,7 @@ export class TabsPage implements OnDestroy {
   showPrintOptions = false;
   showSavedPdfAction = false;
   printStatusMessage = '';
+  private apiBaseUrl = environment.apiBaseUrl.replace(/\/$/, '');
   private routerSubscription: Subscription;
 
   primaryNavItems = [
@@ -341,11 +343,29 @@ export class TabsPage implements OnDestroy {
   }
 
   private async fetchJson(fileName: string): Promise<any> {
-    const response = await fetch(`assets/data/${fileName}`, { cache: 'no-store' });
+    const response = await fetch(`${this.apiBaseUrl}${this.getApiPath(fileName)}`, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`Unable to load ${fileName}`);
     }
     return response.json();
+  }
+
+  private getApiPath(fileName: string): string {
+    const paths: Record<string, string> = {
+      'dashboard.json': '/api/dashboard',
+      'overall-report.json': '/api/reports/overall',
+      'stock-report.json': '/api/reports/stock',
+      'product-info.json': '/api/products/info',
+      'production-log.json': '/api/reports/production-log',
+      'recent-entries.json': '/api/reports/recent-entries',
+      'inventory-packaging.json': '/api/inventory/packaging',
+      'inventory-raw-salt.json': '/api/inventory/raw-salt',
+      'inventory-bundles.json': '/api/inventory/bundles',
+      'inventory-consumables.json': '/api/inventory/consumables',
+      'inventory-crystalline.json': '/api/inventory/crystalline',
+    };
+
+    return paths[fileName] ?? '/api/dashboard';
   }
 
   private buildReport(title: string, sections: Array<{ heading: string; lines: string[] }>) {

@@ -1,8 +1,0 @@
-{
-  "title": "Stock Report",
-  "cards": [
-    { "title": "Raw Stock", "value": 300, "unit": "Metric Ton", "status": "green", "trend": { "direction": "up", "text": "+2% from last week" } },
-    { "title": "Finished Goods", "value": "1,930", "unit": "Bundles", "status": "green", "trend": { "direction": "up", "text": "+5% from last week" } },
-    { "title": "Packaging Bags", "value": "12,450", "unit": "Total Bags", "status": "yellow", "trend": { "direction": "down", "text": "-15% from last week" } }
-  ]
-}
