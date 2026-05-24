@@ -6,7 +6,7 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 export const config = {
   appName: 'LedgerFlow',
-  host: process.env.HOST || '127.0.0.1',
+  host: process.env.HOST || '0.0.0.0',
   port: Number(process.env.PORT || 8080),
   dataDir: process.env.LEDGERFLOW_DATA_DIR || resolve(rootDir, '..', 'src', 'assets', 'data'),
   maxBodyBytes: Number(process.env.MAX_BODY_BYTES || 1_000_000),
