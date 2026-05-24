@@ -13,6 +13,15 @@ export function createApp(options = {}) {
   const reportService = new ReportService(store, inventoryService);
   const router = new Router({ settings, inventoryService, reportService });
 
+  router.get('/', ({ settings }) => ({
+    success: true,
+    data: {
+      app: settings.appName,
+      status: 'running',
+      routes: ['/health', '/api/dashboard', '/api/reports/overall', '/api/reports/stock', '/api/products/info', '/api/inventory'],
+    },
+  }));
+
   router.get('/health', ({ settings }) => ({
     success: true,
     data: {

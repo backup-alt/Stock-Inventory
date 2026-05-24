@@ -14,6 +14,9 @@ import {
 @Injectable({ providedIn: 'root' })
 export class DataService {
   private apiBaseUrl = environment.apiBaseUrl.replace(/\/$/, '');
+  private apiHeaders: Record<string, string> = environment.apiKey
+    ? { 'x-ledgerflow-api-key': environment.apiKey }
+    : {};
 
   constructor(private http: HttpClient) {}
 
@@ -62,6 +65,6 @@ export class DataService {
   }
 
   private getData<T>(apiPath: string): Observable<T> {
-    return this.http.get<T>(`${this.apiBaseUrl}${apiPath}`);
+    return this.http.get<T>(`${this.apiBaseUrl}${apiPath}`, { headers: this.apiHeaders });
   }
 }

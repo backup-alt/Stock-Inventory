@@ -4,9 +4,10 @@ import { createApp } from '../src/app.js';
 
 let server;
 let baseUrl;
+const apiKey = 'test-key';
 
 before(async () => {
-  server = createApp();
+  server = createApp({ clientApiKey: apiKey });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   baseUrl = `http://${address.address}:${address.port}`;
@@ -27,8 +28,8 @@ test('health endpoint returns the service status', async () => {
 
 test('packaging roll and bag inventory are separate categories', async () => {
   const [rollsResponse, bagsResponse] = await Promise.all([
-    fetch(`${baseUrl}/api/inventory/packaging-rolls`),
-    fetch(`${baseUrl}/api/inventory/packaging-bags`),
+    fetchApi('/api/inventory/packaging-rolls'),
+    fetchApi('/api/inventory/packaging-bags'),
   ]);
 
   const rolls = await rollsResponse.json();
@@ -40,9 +41,23 @@ test('packaging roll and bag inventory are separate categories', async () => {
 });
 
 test('future report dates are rejected', async () => {
-  const response = await fetch(`${baseUrl}/api/reports/overall?period=daily&date=2999-01-01`);
+  const response = await fetchApi('/api/reports/overall?period=daily&date=2999-01-01');
   const payload = await response.json();
 
   assert.equal(response.status, 422);
   assert.equal(payload.success, false);
 });
+
+test('api endpoints require the generated key', async () => {
+  const response = await fetch(`${baseUrl}/api/dashboard`);
+  const payload = await response.json();
+
+  assert.equal(response.status, 401);
+  assert.equal(payload.success, false);
+});
+
+function fetchApi(path) {
+  return fetch(`${baseUrl}${path}`, {
+    headers: { 'x-ledgerflow-api-key': apiKey },
+  });
+}

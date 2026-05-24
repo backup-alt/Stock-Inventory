@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { HttpError } from './http-error.js';
 import { applyCors, sendError, sendJson } from './responses.js';
 
@@ -58,6 +59,7 @@ export class Router {
     }
 
     try {
+      this.authorize(request, url.pathname);
       const payload = await route.handler({
         ...this.context,
         request,
@@ -91,4 +93,27 @@ export class Router {
 
     return null;
   }
+
+  authorize(request, pathname) {
+    const key = this.context.settings.clientApiKey;
+
+    if (!key || !pathname.startsWith('/api/')) {
+      return;
+    }
+
+    const headerName = this.context.settings.clientApiKeyHeader.toLowerCase();
+    const value = request.headers[headerName];
+    const provided = Array.isArray(value) ? value[0] : value;
+
+    if (!provided || !safeEquals(provided, key)) {
+      throw new HttpError(401, 'A valid API key is required');
+    }
+  }
+}
+
+function safeEquals(left, right) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }

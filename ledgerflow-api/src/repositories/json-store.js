@@ -10,11 +10,11 @@ export class JsonStore {
 
   source(fileName) {
     if (fileName === 'getSummaryReports.json') {
-      return this.report('summary', this.upstream.summaryReportsUrl, ['source', fileName]);
+      return this.report('summary', this.upstream.summaryReportsUrl, [fileName]);
     }
 
     if (fileName === 'getStockReports.json') {
-      return this.report('stock', this.upstream.stockReportsUrl, ['source', fileName]);
+      return this.report('stock', this.upstream.stockReportsUrl, [fileName]);
     }
 
     return this.read(['source', fileName]);

@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiBaseUrl: ''
+  apiBaseUrl: '',
+  apiKey: 'lf_live_0Cg3N7UnBM7usWDsE4vyhuKOfQGpKOEund03oMC6U6g'
 };

@@ -22,6 +22,7 @@ export class TabsPage implements OnDestroy {
   showSavedPdfAction = false;
   printStatusMessage = '';
   private apiBaseUrl = environment.apiBaseUrl.replace(/\/$/, '');
+  private apiKey = environment.apiKey;
   private routerSubscription: Subscription;
 
   primaryNavItems = [
@@ -343,7 +344,10 @@ export class TabsPage implements OnDestroy {
   }
 
   private async fetchJson(fileName: string): Promise<any> {
-    const response = await fetch(`${this.apiBaseUrl}${this.getApiPath(fileName)}`, { cache: 'no-store' });
+    const response = await fetch(`${this.apiBaseUrl}${this.getApiPath(fileName)}`, {
+      cache: 'no-store',
+      headers: this.apiKey ? { 'x-ledgerflow-api-key': this.apiKey } : {},
+    });
     if (!response.ok) {
       throw new Error(`Unable to load ${fileName}`);
     }
