@@ -161,6 +161,34 @@ test('product info recent entries include owner inventory updates', async () => 
   assert.equal(entry.note, 'Visible recent card');
 });
 
+test('inventory detail filters use saved update timestamps', async () => {
+  const productGroup = 'Timestamp Filter Bundle';
+  await fetchApi('/api/inventory/updates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      category: 'Bundle (unpacked)',
+      productGroup,
+      quantity: 44,
+      unit: 'Piece',
+      note: 'Timestamp filter check',
+    }),
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [todayResponse, oldResponse] = await Promise.all([
+    fetchApi(`/api/inventory/bundles?period=daily&date=${today}`),
+    fetchApi('/api/inventory/bundles?period=daily&date=2001-01-01'),
+  ]);
+  const todayPayload = await todayResponse.json();
+  const oldPayload = await oldResponse.json();
+
+  assert.equal(todayResponse.status, 200);
+  assert.equal(oldResponse.status, 200);
+  assert.ok(todayPayload.items.some((item) => item.productGroup === productGroup));
+  assert.ok(!oldPayload.items.some((item) => item.productGroup === productGroup));
+});
+
 test('future report dates are rejected', async () => {
   const response = await fetchApi('/api/reports/overall?period=daily&date=2999-01-01');
   const payload = await response.json();

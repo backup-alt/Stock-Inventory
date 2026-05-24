@@ -37,8 +37,8 @@ export function createApp(options = {}) {
   router.get('/api/reports/production-log', ({ reportService }) => reportService.productionLog());
   router.get('/api/reports/recent-entries', ({ reportService }) => reportService.recentEntries());
   router.get('/api/products/info', ({ reportService }) => reportService.productInfo());
-  router.get('/api/inventory', ({ inventoryService }) => inventoryService.summary());
-  router.get('/api/inventory/:category', ({ inventoryService, params }) => inventoryService.category(params.category));
+  router.get('/api/inventory', ({ inventoryService, query }) => inventoryService.summary(query));
+  router.get('/api/inventory/:category', ({ inventoryService, params, query }) => inventoryService.category(params.category, query));
   router.post('/api/inventory/updates', async ({ request, settings, inventoryService }) => {
     const body = await readJsonBody(request, settings.maxBodyBytes);
     return inventoryService.createUpdate(body);

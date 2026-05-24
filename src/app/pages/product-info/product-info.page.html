@@ -158,10 +158,11 @@
 
       <!-- Update Inventory Modal -->
       <div *ngIf="showUpdateInventory"
-           class="fixed inset-0 z-[70] bg-black/30 flex items-end sm:items-center justify-center p-4"
+           class="fixed inset-0 z-[70] bg-black/30 flex items-start sm:items-center justify-center overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
            (click)="closeUpdateInventory()">
-        <section class="bg-surface rounded-lg shadow-soft-modal border border-outline-variant w-full max-w-md p-4"
-                 (click)="$event.stopPropagation()">
+        <section class="bg-surface rounded-lg shadow-soft-modal border border-outline-variant w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4"
+                 (click)="$event.stopPropagation()"
+                 (focusin)="keepFocusedControlVisible($event)">
           <div class="flex items-center justify-between mb-4">
             <h2 class="font-headline-md text-headline-md text-on-surface">Update Inventory</h2>
             <button class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant"

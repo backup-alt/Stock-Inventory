@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { HttpError } from '../http/http-error.js';
+import { parseReportFilter } from '../domain/periods.js';
 import { cleanText, numberOrZero, shortUnit, titleFromSlug } from '../domain/strings.js';
 import { rawSaltStock } from '../domain/stock-source.js';
 import { stockStatus } from '../domain/status.js';
@@ -24,18 +25,24 @@ export class InventoryService {
     this.updatesLoaded = false;
   }
 
-  async summary() {
+  async summary(query = undefined) {
     await this.ensureUpdatesLoaded();
+    const filter = query ? parseReportFilter(query) : null;
     const source = await this.stockSource();
     const categories = source.data.inventory.map((category) => {
-      const products = category.products || [];
-      const totalQuantity = products.reduce((sum, item) => sum + numberOrZero(item.qty), 0);
+      const categorySlug = categorySlugFromProductName(category.productName);
+      const products = this.applyUpdates(categorySlug, (category.products || []).map((product) => ({
+        productGroup: product.productGroup,
+        quantity: product.qty,
+        unit: product.unitName,
+      })), filter);
+      const totalQuantity = products.reduce((sum, item) => sum + numberOrZero(item.quantity), 0);
 
       return {
         name: cleanText(category.productName),
         productCount: products.length,
         totalQuantity,
-        unit: shortUnit(products[0]?.unitName || ''),
+        unit: shortUnit(products[0]?.unit || ''),
       };
     });
 
@@ -49,27 +56,28 @@ export class InventoryService {
     };
   }
 
-  async category(slug) {
+  async category(slug, query = undefined) {
     await this.ensureUpdatesLoaded();
+    const filter = query ? parseReportFilter(query) : null;
 
     if (slug === 'packaging') {
-      return this.packaging('all');
+      return this.packaging('all', filter);
     }
 
     if (slug === 'packaging-rolls') {
-      return this.tableFromRows('packaging-rolls', await this.productRows('Roll'));
+      return this.tableFromRows('packaging-rolls', await this.productRows('Roll', filter));
     }
 
     if (slug === 'packaging-bags') {
-      return this.tableFromRows('packaging-bags', await this.productRows('Bag (unpacked)'));
+      return this.tableFromRows('packaging-bags', await this.productRows('Bag (unpacked)', filter));
     }
 
     if (slug === 'bundles') {
-      return this.tableFromRows(slug, await this.productRows('Bundle (unpacked)'));
+      return this.tableFromRows(slug, await this.productRows('Bundle (unpacked)', filter));
     }
 
     if (slug === 'consumables') {
-      return this.tableFromRows(slug, await this.productRows('Consumables'));
+      return this.tableFromRows(slug, await this.productRows('Consumables', filter));
     }
 
     if (slug === 'raw-salt') {
@@ -79,24 +87,24 @@ export class InventoryService {
         productGroup: raw.productGroup,
         quantity: raw.qty,
         unit: raw.unitName,
-      }]);
+      }], filter);
 
       return this.tableFromRows(slug, rows);
     }
 
     if (slug === 'crystalline') {
-      const rows = await this.crystallineRows();
+      const rows = await this.crystallineRows(filter);
       return this.tableFromRows(slug, rows);
     }
 
     throw new HttpError(404, 'Inventory category not found');
   }
 
-  async packaging(mode = 'all') {
+  async packaging(mode = 'all', filter = null) {
     await this.ensureUpdatesLoaded();
     const [rolls, bags] = await Promise.all([
-      this.productRows('Roll'),
-      this.productRows('Bag (unpacked)'),
+      this.productRows('Roll', filter),
+      this.productRows('Bag (unpacked)', filter),
     ]);
 
     if (mode === 'rolls') {
@@ -164,7 +172,7 @@ export class InventoryService {
     return this.store.source('getStockReports.json');
   }
 
-  async productRows(productName) {
+  async productRows(productName, filter = null) {
     await this.ensureUpdatesLoaded();
     const source = await this.stockSource();
     const category = source.data.inventory.find((item) => cleanText(item.productName) === productName);
@@ -175,10 +183,10 @@ export class InventoryService {
       unit: product.unitName,
     }));
 
-    return this.applyUpdates(categorySlug, rows);
+    return this.applyUpdates(categorySlug, rows, filter);
   }
 
-  async crystallineRows() {
+  async crystallineRows(filter = null) {
     await this.ensureUpdatesLoaded();
     const source = await this.stockSource();
     const rows = (source.data.finishedGoods || []).flatMap((plant) => {
@@ -194,7 +202,7 @@ export class InventoryService {
         });
     });
 
-    return this.applyUpdates('crystalline', rows);
+    return this.applyUpdates('crystalline', rows, filter);
   }
 
   tableFromRows(slug, rows) {
@@ -218,17 +226,18 @@ export class InventoryService {
     };
   }
 
-  applyUpdates(categorySlug, rows) {
+  applyUpdates(categorySlug, rows, filter = null) {
     if (!categorySlug) {
       return rows;
     }
 
+    const updates = this.filteredUpdates(categorySlug, filter);
     const rowKeys = new Set(rows.map((row) => cleanText(row.productGroup).toLowerCase()));
     const updatedRows = rows.map((row) => {
-      const update = this.latestUpdate(categorySlug, row.productGroup);
+      const update = this.latestUpdate(updates, row.productGroup);
       return update ? { ...row, quantity: update.quantity, unit: update.unit || row.unit } : row;
     });
-    const customRows = this.uniqueUpdates(categorySlug)
+    const customRows = this.uniqueUpdates(updates)
       .filter((update) => !rowKeys.has(cleanText(update.productGroup).toLowerCase()))
       .map((update) => ({
         productGroup: update.productGroup,
@@ -239,22 +248,21 @@ export class InventoryService {
     return [...customRows, ...updatedRows];
   }
 
-  latestUpdate(categorySlug, productGroup) {
+  latestUpdate(updates, productGroup) {
     const normalizedProduct = cleanText(productGroup).toLowerCase();
-    return this.updates.find((update) => {
-      return update.categorySlug === categorySlug
-        && cleanText(update.productGroup).toLowerCase() === normalizedProduct;
+    return updates.find((update) => cleanText(update.productGroup).toLowerCase() === normalizedProduct);
+  }
+
+  filteredUpdates(categorySlug, filter) {
+    return this.updates.filter((update) => {
+      return update.categorySlug === categorySlug && updateMatchesFilter(update, filter);
     });
   }
 
-  uniqueUpdates(categorySlug) {
+  uniqueUpdates(updates) {
     const seen = new Set();
 
-    return this.updates.filter((update) => {
-      if (update.categorySlug !== categorySlug) {
-        return false;
-      }
-
+    return updates.filter((update) => {
       const key = cleanText(update.productGroup).toLowerCase();
       if (seen.has(key)) {
         return false;
@@ -367,4 +375,51 @@ function defaultUnit(categorySlug) {
     default:
       return 'Unit';
   }
+}
+
+function updateMatchesFilter(update, filter) {
+  if (!filter) {
+    return true;
+  }
+
+  if (!update.createdAt) {
+    return true;
+  }
+
+  const createdAt = new Date(update.createdAt);
+
+  if (Number.isNaN(createdAt.getTime())) {
+    return true;
+  }
+
+  const { start, end } = rangeForFilter(filter);
+  return createdAt >= start && createdAt < end;
+}
+
+function rangeForFilter(filter) {
+  const selected = dateFromIso(filter.date);
+
+  if (filter.period === 'monthly') {
+    const start = new Date(selected.getFullYear(), selected.getMonth(), 1);
+    const end = new Date(selected.getFullYear(), selected.getMonth() + 1, 1);
+    return { start, end };
+  }
+
+  if (filter.period === 'weekly') {
+    const start = new Date(selected);
+    start.setDate(selected.getDate() - 6);
+    const end = new Date(selected);
+    end.setDate(selected.getDate() + 1);
+    return { start, end };
+  }
+
+  const start = new Date(selected);
+  const end = new Date(selected);
+  end.setDate(selected.getDate() + 1);
+  return { start, end };
+}
+
+function dateFromIso(value) {
+  const [year, month, day] = String(value).split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
 }

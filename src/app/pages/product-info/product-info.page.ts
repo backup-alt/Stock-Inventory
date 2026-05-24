@@ -70,6 +70,18 @@ export class ProductInfoPage implements OnInit {
     this.showUpdateInventory = false;
   }
 
+  keepFocusedControlVisible(event: FocusEvent) {
+    const target = event.target;
+
+    if (!(target instanceof HTMLElement) || !target.matches('input, select, textarea')) {
+      return;
+    }
+
+    setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }, 180);
+  }
+
   onCategoryChange() {
     this.selectedItemIndex = 0;
     this.productEntryMode = 'existing';

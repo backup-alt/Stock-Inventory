@@ -11,8 +11,14 @@ import {
   InventoryTableData,
   PackagingInventoryData,
   InventoryUpdateRequest,
-  InventoryUpdateResponse
+  InventoryUpdateResponse,
+  DatePeriod
 } from '../models/inventory.models';
+
+export interface DateFilterParams {
+  period: DatePeriod;
+  date: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
@@ -39,24 +45,24 @@ export class DataService {
     return this.getData<ProductInfoData>('/api/products/info');
   }
 
-  getBundleInventory(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/inventory/bundles');
+  getBundleInventory(filter?: DateFilterParams): Observable<InventoryTableData> {
+    return this.getData<InventoryTableData>('/api/inventory/bundles', filter);
   }
 
-  getRawSaltInventory(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/inventory/raw-salt');
+  getRawSaltInventory(filter?: DateFilterParams): Observable<InventoryTableData> {
+    return this.getData<InventoryTableData>('/api/inventory/raw-salt', filter);
   }
 
-  getPackagingInventory(): Observable<PackagingInventoryData> {
-    return this.getData<PackagingInventoryData>('/api/inventory/packaging');
+  getPackagingInventory(filter?: DateFilterParams): Observable<PackagingInventoryData> {
+    return this.getData<PackagingInventoryData>('/api/inventory/packaging', filter);
   }
 
-  getConsumablesInventory(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/inventory/consumables');
+  getConsumablesInventory(filter?: DateFilterParams): Observable<InventoryTableData> {
+    return this.getData<InventoryTableData>('/api/inventory/consumables', filter);
   }
 
-  getCrystallineInventory(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/inventory/crystalline');
+  getCrystallineInventory(filter?: DateFilterParams): Observable<InventoryTableData> {
+    return this.getData<InventoryTableData>('/api/inventory/crystalline', filter);
   }
 
   getProductionLog(): Observable<InventoryTableData> {
@@ -71,8 +77,13 @@ export class DataService {
     return this.http.post<InventoryUpdateResponse>(`${this.apiBaseUrl}/api/inventory/updates`, payload, { headers: this.apiHeaders });
   }
 
-  private getData<T>(apiPath: string): Observable<T> {
-    return this.http.get<T>(`${this.apiBaseUrl}${apiPath}`, { headers: this.apiHeaders }).pipe(
+  private getData<T>(apiPath: string, filter?: DateFilterParams): Observable<T> {
+    const params = filter ? `?${new URLSearchParams({
+      period: filter.period,
+      date: filter.date,
+    }).toString()}` : '';
+
+    return this.http.get<T>(`${this.apiBaseUrl}${apiPath}${params}`, { headers: this.apiHeaders }).pipe(
       retry({
         count: 5,
         delay: () => timer(2000),

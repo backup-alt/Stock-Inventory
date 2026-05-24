@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { DataService } from '../../core/services/data.service';
-import { DateFilterService } from '../../core/services/date-filter.service';
+import { CalendarDay, DateFilterService } from '../../core/services/date-filter.service';
 import { DatePeriod, InventoryTableItem, PackagingInventoryData } from '../../core/models/inventory.models';
 import { filter } from 'rxjs';
 
@@ -26,6 +26,13 @@ export class InventoryPackagingPage implements OnInit {
   displayRows: PackagingDisplayRow[] = [];
   activePeriod: DatePeriod = 'daily';
   currentDate = '';
+  selectedDateIso = '';
+  showCalendar = false;
+  calendarMonth = new Date();
+  calendarMonthLabel = '';
+  calendarDays: CalendarDay[] = [];
+  calendarNextDisabled = false;
+  weekDayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   constructor(
     private dataService: DataService,
@@ -35,7 +42,10 @@ export class InventoryPackagingPage implements OnInit {
 
   ngOnInit() {
     this.activePeriod = this.dateFilter.getCurrentPeriod();
-    this.currentDate = this.dateFilter.getFormattedDate(this.activePeriod);
+    this.selectedDateIso = this.dateFilter.getInputDateValue();
+    this.calendarMonth = this.dateFilter.parseInputDate(this.selectedDateIso);
+    this.refreshCalendar();
+    this.currentDate = this.dateFilter.getFormattedDate(this.activePeriod, this.selectedDateIso);
     this.setViewMode(this.router.url);
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
@@ -49,7 +59,34 @@ export class InventoryPackagingPage implements OnInit {
   setPeriod(period: string) {
     this.activePeriod = period as DatePeriod;
     this.dateFilter.setPeriod(this.activePeriod);
-    this.currentDate = this.dateFilter.getFormattedDate(this.activePeriod);
+    this.currentDate = this.dateFilter.getFormattedDate(this.activePeriod, this.selectedDateIso);
+    this.loadData();
+  }
+
+  openCalendar() {
+    this.showCalendar = !this.showCalendar;
+  }
+
+  selectDate(day: CalendarDay) {
+    if (day.isFuture) {
+      return;
+    }
+
+    this.selectedDateIso = day.iso;
+    this.calendarMonth = this.dateFilter.parseInputDate(day.iso);
+    this.showCalendar = false;
+    this.refreshCalendar();
+    this.currentDate = this.dateFilter.getFormattedDate(this.activePeriod, this.selectedDateIso);
+    this.loadData();
+  }
+
+  moveCalendarMonth(offset: number) {
+    if (offset > 0 && this.calendarNextDisabled) {
+      return;
+    }
+
+    this.calendarMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth() + offset, 1);
+    this.refreshCalendar();
   }
 
   loadData(refresher?: any) {
@@ -57,7 +94,7 @@ export class InventoryPackagingPage implements OnInit {
       this.isLoading = true;
     }
     this.hasError = false;
-    this.dataService.getPackagingInventory().subscribe({
+    this.dataService.getPackagingInventory(this.dateQuery()).subscribe({
       next: (data) => {
         this.data = data;
         this.refreshDisplayRows();
@@ -96,6 +133,23 @@ export class InventoryPackagingPage implements OnInit {
     }
 
     setTimeout(() => refresher.target?.complete(), 500);
+  }
+
+  private dateQuery() {
+    return { period: this.activePeriod, date: this.selectedDateIso };
+  }
+
+  private refreshCalendar() {
+    this.calendarMonthLabel = this.dateFilter.getMonthLabel(this.calendarMonth);
+    this.calendarDays = this.dateFilter.getCalendarDays(this.calendarMonth, this.selectedDateIso);
+    this.calendarNextDisabled = this.isNextMonthFuture();
+  }
+
+  private isNextMonthFuture(): boolean {
+    const today = new Date();
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const nextMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth() + 1, 1);
+    return nextMonth > currentMonth;
   }
 
   get pageTitle(): string {
