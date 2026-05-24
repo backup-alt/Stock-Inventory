@@ -1,5 +1,7 @@
+import { productionApi } from './production-api';
+
 export const environment = {
   production: true,
-  apiBaseUrl: '',
-  apiKey: 'lf_live_0Cg3N7UnBM7usWDsE4vyhuKOfQGpKOEund03oMC6U6g'
+  apiBaseUrl: productionApi.baseUrl,
+  apiKey: productionApi.key
 };

@@ -1,8 +1,8 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { embeddedClientApiKey } from './api-credentials.js';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const defaultApiKey = 'lf_live_0Cg3N7UnBM7usWDsE4vyhuKOfQGpKOEund03oMC6U6g';
 
 export const config = {
   appName: 'LedgerFlow',
@@ -10,7 +10,7 @@ export const config = {
   port: Number(process.env.PORT || 8080),
   dataDir: process.env.LEDGERFLOW_DATA_DIR || resolve(rootDir, '..', 'src', 'assets', 'data'),
   maxBodyBytes: Number(process.env.MAX_BODY_BYTES || 1_000_000),
-  clientApiKey: process.env.LEDGERFLOW_API_KEY || defaultApiKey,
+  clientApiKey: process.env.LEDGERFLOW_API_KEY || embeddedClientApiKey,
   clientApiKeyHeader: process.env.LEDGERFLOW_API_KEY_HEADER || 'x-ledgerflow-api-key',
   upstream: {
     summaryReportsUrl: process.env.SUMMARY_REPORTS_URL || process.env.GET_SUMMARY_REPORTS_URL || '',
