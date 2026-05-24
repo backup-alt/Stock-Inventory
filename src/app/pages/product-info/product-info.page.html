@@ -190,7 +190,7 @@
               </select>
             </label>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid gap-3">
               <label class="block">
                 <span class="font-label-bold text-label-bold text-on-surface-variant uppercase">Quantity</span>
                 <input class="mt-1 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
@@ -199,17 +199,6 @@
                        step="0.01"
                        [(ngModel)]="updateQuantity"
                        name="quantity">
-              </label>
-
-              <label class="block">
-                <span class="font-label-bold text-label-bold text-on-surface-variant uppercase">Status</span>
-                <select class="mt-1 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
-                        [(ngModel)]="updateStatus"
-                        name="status">
-                  <option value="ok">OK</option>
-                  <option value="low">Low</option>
-                  <option value="critical">Critical</option>
-                </select>
               </label>
             </div>
 
@@ -222,12 +211,20 @@
                      name="note">
             </label>
 
+            <p *ngIf="updateError" class="rounded-md bg-error-container px-3 py-2 text-[12px] font-semibold text-on-error-container">
+              {{updateError}}
+            </p>
+
             <div class="flex gap-2 pt-2">
               <button type="button"
-                      class="flex-1 h-11 rounded-md border border-outline-variant text-on-surface font-label-bold"
+                      class="flex-1 h-11 rounded-md border border-outline-variant text-on-surface font-label-bold disabled:opacity-50"
+                      [disabled]="isSavingUpdate"
                       (click)="closeUpdateInventory()">Cancel</button>
               <button type="submit"
-                      class="flex-1 h-11 rounded-md bg-primary text-on-primary font-label-bold">Save</button>
+                      class="flex-1 h-11 rounded-md bg-primary text-on-primary font-label-bold disabled:opacity-60"
+                      [disabled]="isSavingUpdate">
+                {{isSavingUpdate ? 'Saving...' : 'Save'}}
+              </button>
             </div>
           </form>
         </section>

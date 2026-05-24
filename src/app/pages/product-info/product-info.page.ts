@@ -16,8 +16,9 @@ export class ProductInfoPage implements OnInit {
   selectedCategoryIndex = 0;
   selectedItemIndex = 0;
   updateQuantity = 0;
-  updateStatus = 'ok';
   updateNote = '';
+  isSavingUpdate = false;
+  updateError = '';
 
   constructor(private dataService: DataService) {}
 
@@ -52,6 +53,10 @@ export class ProductInfoPage implements OnInit {
   }
 
   closeUpdateInventory() {
+    if (this.isSavingUpdate) {
+      return;
+    }
+
     this.showUpdateInventory = false;
   }
 
@@ -69,26 +74,44 @@ export class ProductInfoPage implements OnInit {
       return;
     }
 
+    this.updateError = '';
     const item = this.data.inventoryCategories[this.selectedCategoryIndex]?.items[this.selectedItemIndex];
+    const category = this.data.inventoryCategories[this.selectedCategoryIndex];
     if (!item) {
       return;
     }
 
-    item.quantity = Number(this.updateQuantity) || 0;
-    item.status = this.updateStatus;
-    const entry: RecentEntry = {
-      type: 'inbound',
-      label: 'Manual inventory update',
-      date: 'Just now',
-      quantity: `${item.quantity} ${item.unit}`,
-      source: this.updateNote || 'Demo update',
-      icon: 'edit'
-    };
-    this.data.recentEntries = [
-      entry,
-      ...this.data.recentEntries
-    ].slice(0, 4);
-    this.closeUpdateInventory();
+    const quantity = Number(this.updateQuantity) || 0;
+    this.isSavingUpdate = true;
+    this.dataService.createInventoryUpdate({
+      category: category.title,
+      productGroup: item.name,
+      quantity,
+      note: this.updateNote
+    }).subscribe({
+      next: () => {
+        item.quantity = quantity;
+        item.status = this.statusFromQuantity(quantity);
+        const entry: RecentEntry = {
+          type: 'inbound',
+          label: 'Manual inventory update',
+          date: 'Just now',
+          quantity: `${item.quantity} ${item.unit}`,
+          source: this.updateNote || 'Owner update',
+          icon: 'edit'
+        };
+        this.data!.recentEntries = [
+          entry,
+          ...this.data!.recentEntries
+        ].slice(0, 4);
+        this.isSavingUpdate = false;
+        this.showUpdateInventory = false;
+      },
+      error: () => {
+        this.isSavingUpdate = false;
+        this.updateError = 'Unable to save the inventory update. Please try again.';
+      }
+    });
   }
 
   getCategoryRoute(title: string): string {
@@ -129,12 +152,22 @@ export class ProductInfoPage implements OnInit {
     const item = this.data?.inventoryCategories[this.selectedCategoryIndex]?.items[this.selectedItemIndex];
     if (!item) {
       this.updateQuantity = 0;
-      this.updateStatus = 'ok';
       return;
     }
 
     this.updateQuantity = item.quantity;
-    this.updateStatus = item.status;
+  }
+
+  private statusFromQuantity(quantity: number): string {
+    if (quantity <= 0) {
+      return 'critical';
+    }
+
+    if (quantity <= 100) {
+      return 'low';
+    }
+
+    return 'ok';
   }
 
   private completeRefresh(refresher?: any) {

@@ -142,6 +142,27 @@ export interface InventoryCategory {
   items: InventoryItem[];
 }
 
+export interface InventoryUpdateRequest {
+  category: string;
+  productGroup: string;
+  quantity: number;
+  note?: string;
+}
+
+export interface InventoryUpdateResponse {
+  success: boolean;
+  data: {
+    id: string;
+    category: string;
+    categorySlug: string;
+    productGroup: string;
+    quantity: number;
+    status: StockStatus;
+    note: string;
+    createdAt: string;
+  };
+}
+
 export interface ProductInfoData {
   hero: ProductHero;
   productionHighlights: {

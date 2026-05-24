@@ -8,7 +8,9 @@ import {
   StockReportData,
   ProductInfoData,
   InventoryTableData,
-  PackagingInventoryData
+  PackagingInventoryData,
+  InventoryUpdateRequest,
+  InventoryUpdateResponse
 } from '../models/inventory.models';
 
 @Injectable({ providedIn: 'root' })
@@ -62,6 +64,10 @@ export class DataService {
 
   getRecentEntries(): Observable<InventoryTableData> {
     return this.getData<InventoryTableData>('/api/reports/recent-entries');
+  }
+
+  createInventoryUpdate(payload: InventoryUpdateRequest): Observable<InventoryUpdateResponse> {
+    return this.http.post<InventoryUpdateResponse>(`${this.apiBaseUrl}/api/inventory/updates`, payload, { headers: this.apiHeaders });
   }
 
   private getData<T>(apiPath: string): Observable<T> {

@@ -175,7 +175,7 @@ export class ReportService {
         },
       },
       recentEntries: recentStockEntries(reports.stockEntry || []),
-      inventoryCategories: productCategories(stock),
+      inventoryCategories: await productCategories(stock, this.inventoryService),
     };
   }
 
@@ -231,40 +231,40 @@ export class ReportService {
   }
 }
 
-function productCategories(stock) {
+async function productCategories(stock, inventoryService) {
   const raw = rawSaltStock(stock);
-  const categories = stock.data.inventory || [];
-  const bundles = findCategory(categories, 'Bundle (unpacked)');
-  const rolls = findCategory(categories, 'Roll');
-  const bags = findCategory(categories, 'Bag (unpacked)');
-  const consumables = findCategory(categories, 'Consumables');
+  const rawRows = (await inventoryService.category('raw-salt')).items;
+  const bundles = await inventoryService.productRows('Bundle (unpacked)');
+  const rolls = await inventoryService.productRows('Roll');
+  const bags = await inventoryService.productRows('Bag (unpacked)');
+  const consumables = await inventoryService.productRows('Consumables');
 
   return [
     {
       title: 'Raw Salt Stock',
-      items: [productInfoItem(raw.productGroup || 'Raw Salt', raw.qty, raw.unitName || 'Metric Ton')],
+      items: rawRows.map((item) => productInfoItem(item.productGroup || raw.productGroup || 'Raw Salt', item.quantity, item.unit || raw.unitName || 'Metric Ton')),
     },
     {
       title: 'Bundle (unpacked)',
-      items: productInfoItems(bundles?.products || []),
+      items: productInfoRows(bundles),
     },
     {
       title: 'Packaging - Rolls',
-      items: productInfoItems(rolls?.products || []),
+      items: productInfoRows(rolls),
     },
     {
       title: 'Packaging - Bags',
-      items: productInfoItems(bags?.products || []),
+      items: productInfoRows(bags),
     },
     {
       title: 'Consumables',
-      items: productInfoItems(consumables?.products || []),
+      items: productInfoRows(consumables),
     },
   ].filter((category) => category.items.length > 0);
 }
 
-function productInfoItems(products) {
-  return products.map((product) => productInfoItem(product.productGroup, product.qty, product.unitName));
+function productInfoRows(rows) {
+  return rows.map((row) => productInfoItem(row.productGroup, row.quantity, row.unit));
 }
 
 function productInfoItem(name, quantity, unit) {

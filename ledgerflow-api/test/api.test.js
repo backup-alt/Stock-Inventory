@@ -52,6 +52,27 @@ test('dashboard explains raw stock weight without compact units', async () => {
   assert.equal(stockWeight.footer, '300 metric tons raw stock');
 });
 
+test('inventory updates are accepted and reflected in category responses', async () => {
+  const updateResponse = await fetchApi('/api/inventory/updates', {
+    method: 'POST',
+    body: JSON.stringify({
+      category: 'Packaging - Rolls',
+      productGroup: 'STILT 1 KG FF',
+      quantity: 55,
+      note: 'Owner correction',
+    }),
+  });
+  const update = await updateResponse.json();
+  const rollsResponse = await fetchApi('/api/inventory/packaging-rolls');
+  const rolls = await rollsResponse.json();
+  const updatedItem = rolls.items.find((item) => item.productGroup === 'STILT 1 KG FF');
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(update.success, true);
+  assert.equal(updatedItem.quantity, 55);
+  assert.equal(updatedItem.status, 'low-stock');
+});
+
 test('future report dates are rejected', async () => {
   const response = await fetchApi('/api/reports/overall?period=daily&date=2999-01-01');
   const payload = await response.json();
@@ -68,8 +89,9 @@ test('api endpoints require the generated key', async () => {
   assert.equal(payload.success, false);
 });
 
-function fetchApi(path) {
+function fetchApi(path, options = {}) {
   return fetch(`${baseUrl}${path}`, {
+    ...options,
     headers: { 'x-ledgerflow-api-key': apiKey },
   });
 }

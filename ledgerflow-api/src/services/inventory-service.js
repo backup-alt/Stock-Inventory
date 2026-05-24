@@ -68,10 +68,11 @@ export class InventoryService {
     if (slug === 'raw-salt') {
       const source = await this.stockSource();
       const raw = rawSaltStock(source);
+      const update = this.latestUpdate('raw-salt', raw.productGroup);
 
       return this.tableFromRows(slug, [{
         productGroup: raw.productGroup,
-        quantity: raw.qty,
+        quantity: update?.quantity ?? raw.qty,
         unit: raw.unitName,
       }]);
     }
@@ -109,8 +110,9 @@ export class InventoryService {
 
   async createUpdate(payload) {
     const quantity = Number(payload.quantity);
+    const categorySlug = categorySlugFromLabel(payload.category);
 
-    if (!payload.category || !payload.productGroup) {
+    if (!categorySlug || !payload.productGroup) {
       throw new HttpError(400, 'Category and productGroup are required');
     }
 
@@ -121,9 +123,10 @@ export class InventoryService {
     const update = {
       id: randomUUID(),
       category: cleanText(payload.category),
+      categorySlug,
       productGroup: cleanText(payload.productGroup),
       quantity,
-      status: payload.status || stockStatus(quantity),
+      status: stockStatus(quantity),
       note: cleanText(payload.note || ''),
       createdAt: new Date().toISOString(),
     };
@@ -143,12 +146,14 @@ export class InventoryService {
   async productRows(productName) {
     const source = await this.stockSource();
     const category = source.data.inventory.find((item) => cleanText(item.productName) === productName);
-
-    return (category?.products || []).map((product) => ({
+    const categorySlug = categorySlugFromProductName(productName);
+    const rows = (category?.products || []).map((product) => ({
       productGroup: product.productGroup,
       quantity: product.qty,
       unit: product.unitName,
     }));
+
+    return this.applyUpdates(categorySlug, rows);
   }
 
   async crystallineRows() {
@@ -187,4 +192,75 @@ export class InventoryService {
       status: stockStatus(quantity),
     };
   }
+
+  applyUpdates(categorySlug, rows) {
+    if (!categorySlug) {
+      return rows;
+    }
+
+    return rows.map((row) => {
+      const update = this.latestUpdate(categorySlug, row.productGroup);
+      return update ? { ...row, quantity: update.quantity } : row;
+    });
+  }
+
+  latestUpdate(categorySlug, productGroup) {
+    const normalizedProduct = cleanText(productGroup).toLowerCase();
+    return this.updates.find((update) => {
+      return update.categorySlug === categorySlug
+        && cleanText(update.productGroup).toLowerCase() === normalizedProduct;
+    });
+  }
+}
+
+function categorySlugFromProductName(productName) {
+  const value = cleanText(productName).toLowerCase();
+
+  if (value === 'bundle (unpacked)') {
+    return 'bundles';
+  }
+
+  if (value === 'roll') {
+    return 'packaging-rolls';
+  }
+
+  if (value === 'bag (unpacked)') {
+    return 'packaging-bags';
+  }
+
+  if (value === 'consumables') {
+    return 'consumables';
+  }
+
+  return categorySlugFromLabel(productName);
+}
+
+function categorySlugFromLabel(label) {
+  const value = cleanText(label).toLowerCase();
+
+  if (value.includes('raw')) {
+    return 'raw-salt';
+  }
+
+  if (value.includes('bundle')) {
+    return 'bundles';
+  }
+
+  if (value.includes('roll')) {
+    return 'packaging-rolls';
+  }
+
+  if (value.includes('bag')) {
+    return 'packaging-bags';
+  }
+
+  if (value.includes('consumable')) {
+    return 'consumables';
+  }
+
+  if (value.includes('crystalline') || value.includes('crystal')) {
+    return 'crystalline';
+  }
+
+  return '';
 }
