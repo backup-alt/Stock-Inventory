@@ -1,0 +1,104 @@
+<!-- Raw Salt Inventory Page -->
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="loadData($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Pull to refresh"
+      refreshingSpinner="crescent"
+      refreshingText="Refreshing inventory">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <main class="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col gap-gutter">
+    <!-- Loading State -->
+    <ng-container *ngIf="isLoading">
+      <div class="skeleton h-4 w-40 mb-2"></div>
+      <div class="skeleton h-8 w-56 mb-1"></div>
+      <div class="skeleton h-4 w-72 mb-6"></div>
+      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+        <div class="bg-surface-container-low/50 p-3 border-b border-outline-variant/30 flex">
+          <div class="skeleton h-3 w-28"></div>
+          <div class="skeleton h-3 w-16 ml-auto"></div>
+          <div class="skeleton h-3 w-12 ml-4"></div>
+        </div>
+        <div *ngFor="let i of [1,2,3,4,5]" class="p-3 border-b border-outline-variant/20 flex">
+          <div class="skeleton h-4 w-36"></div>
+          <div class="skeleton h-4 w-14 ml-auto"></div>
+          <div class="skeleton h-4 w-12 ml-4"></div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Error State -->
+    <ng-container *ngIf="hasError && !isLoading">
+      <div class="flex flex-col items-center justify-center py-20 text-center">
+        <span class="material-symbols-outlined text-6xl text-outline-variant mb-4">error_outline</span>
+        <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Unable to load Raw Salt Inventory</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mb-6">Please try again later.</p>
+        <button class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-label-bold text-label-bold flex items-center gap-2"
+                (click)="loadData()">
+          <span class="material-symbols-outlined text-lg">refresh</span> Retry
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Data State -->
+    <ng-container *ngIf="!isLoading && !hasError && data">
+      <!-- Breadcrumb -->
+      <nav class="flex items-center gap-2 text-on-surface-variant font-body-md mb-2">
+        <a class="hover:text-primary transition-colors font-semibold" routerLink="/tabs/product-info">{{data.breadcrumb[0]}}</a>
+        <span class="material-symbols-outlined text-sm">chevron_right</span>
+        <span class="text-on-surface font-semibold">{{data.breadcrumb[1]}}</span>
+      </nav>
+
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-4 gap-4">
+        <div>
+          <h1 class="font-headline-lg text-headline-lg text-on-surface mb-1">{{data.title}}</h1>
+          <p class="font-body-md text-body-md text-on-surface-variant">{{data.description}}</p>
+        </div>
+        <div class="flex gap-2">
+          <button class="bg-surface-container border border-outline-variant text-on-surface px-4 py-2 rounded-lg font-label-bold text-label-bold flex items-center gap-2 hover:bg-surface-container-high transition-colors">
+            <span class="material-symbols-outlined text-sm">filter_list</span> Filter
+          </button>
+          <button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-bold text-label-bold flex items-center gap-2 hover:opacity-90 transition-opacity shadow-sm">
+            <span class="material-symbols-outlined text-sm">download</span> Export
+          </button>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-outline-variant overflow-hidden flex-1 w-full">
+        <div class="w-full max-w-full overflow-hidden">
+          <table class="w-full text-left">
+            <thead class="bg-surface-container-low/50 border-b border-outline-variant/30">
+              <tr>
+                <th class="p-3 font-label-bold text-[10px] text-on-surface-variant uppercase tracking-tight w-2/3">Product Group</th>
+                <th class="p-3 font-label-bold text-[10px] text-on-surface-variant uppercase tracking-tight text-right w-1/4">Quantity</th>
+                <th class="p-3 font-label-bold text-[10px] text-on-surface-variant uppercase tracking-tight text-left">Unit</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-outline-variant/20">
+              <tr *ngFor="let item of data.items"
+                  [class.hover:bg-error-container/10]="item.status === 'out-of-stock'"
+                  [class.hover:bg-surface-container-low]="item.status !== 'out-of-stock'"
+                  class="transition-colors">
+                <td class="p-3 font-body-md font-semibold py-4"
+                    [class.text-on-surface]="item.status !== 'out-of-stock'">
+                  <div class="flex items-center gap-1.5">
+                    <span *ngIf="item.status === 'out-of-stock'" class="material-symbols-outlined text-error text-[16px]">warning</span>
+                    <span>{{item.productGroup}}</span>
+                  </div>
+                </td>
+                <td class="p-3 font-headline-md text-right font-bold"
+                    [class.text-primary]="item.status !== 'out-of-stock'"
+                    [class.text-error]="item.status === 'out-of-stock'">{{item.quantity | number}}</td>
+                <td class="p-3 font-body-md text-on-surface-variant text-sm">{{item.unit}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ng-container>
+  </main>
+</ion-content>

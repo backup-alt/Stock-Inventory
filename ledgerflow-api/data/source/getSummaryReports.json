@@ -1,0 +1,967 @@
+{
+    "data": {
+        "reports": {
+            "stockEntry": [
+                {
+                    "productCode": "Bag (unpacked)-GHCL WHITE LAMINATE  FINE\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "GHCL WHITE LAMINATE  FINE\t\t\t",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Salt-Raw Salt--Metric Ton-",
+                    "productName": "Salt",
+                    "productGroup": "Raw Salt",
+                    "productBrand": null,
+                    "quantity": 300,
+                    "unit": "Metric Ton",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-GST PVD  BAG -FF\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "GST PVD  BAG -FF\t\t\t",
+                    "productBrand": null,
+                    "quantity": 1250,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-TATA CRYSTAL 1KG--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "TATA CRYSTAL 1KG",
+                    "productBrand": null,
+                    "quantity": 21118.5,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-MOMMY'S  1KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "MOMMY'S  1KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 2000,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-ASHOKA 1/2 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "ASHOKA 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 690,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-SANDY'S PURE 1 KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "SANDY'S PURE 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 175,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-I - SWAAD 1 KG  CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "I - SWAAD 1 KG  CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 150,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-WOW 1/2 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "WOW 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-MOMMY'S  1KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "MOMMY'S  1KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 175,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-INDUS 1 KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "INDUS 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-VRK 25 KG CRYSTAL\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "VRK 25 KG CRYSTAL\t\t\t",
+                    "productBrand": null,
+                    "quantity": 4470,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-STILT 1 KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "STILT 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 11321,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-GHCL BLUE POWDER BAG FINE\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "GHCL BLUE POWDER BAG FINE\t\t\t",
+                    "productBrand": null,
+                    "quantity": 300,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-SANDY'S PURE 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "SANDY'S PURE 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 3500,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-STILT 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "STILT 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 50,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-LAVAN 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "LAVAN 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 5453,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-PONSSEN LAMINATE WHITE BAG\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "PONSSEN LAMINATE WHITE BAG\t\t\t",
+                    "productBrand": null,
+                    "quantity": 835,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-MOM 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "MOM 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 22360,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-TATA CRYSTAL 1KG--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "TATA CRYSTAL 1KG",
+                    "productBrand": null,
+                    "quantity": 49880,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-I - FLOW 1KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "I - FLOW 1KG FF",
+                    "productBrand": null,
+                    "quantity": 425,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-ASHOKA 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "ASHOKA 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 150,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-ASHOKA 1/2 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "ASHOKA 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 125,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-MOM 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "MOM 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 225,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-SAPAN 1/2 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "SAPAN 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 150,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-MOM 1 KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "MOM 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 6830,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-ASHOKA 1KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "ASHOKA 1KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 3560,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-LAVAN 50 KG FF BAG\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "LAVAN 50 KG FF BAG\t\t\t",
+                    "productBrand": null,
+                    "quantity": 650,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-MOM 1 KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "MOM 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 675,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-I - FLOW 1/2 KG FF --Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "I - FLOW 1/2 KG FF ",
+                    "productBrand": null,
+                    "quantity": 275,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-SAPAN 1KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "SAPAN 1KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 3000,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-ANNA 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "ANNA 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 75,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-50 KG CRYSTAL YELLOW BAG\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "50 KG CRYSTAL YELLOW BAG\t\t\t",
+                    "productBrand": null,
+                    "quantity": 835,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-S GOLD 1KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "S GOLD 1KG FF",
+                    "productBrand": null,
+                    "quantity": 1000,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-INDUS 1 KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "INDUS 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-SAPAN 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "SAPAN 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 350,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-SANDY'S PURE 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "SANDY'S PURE 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 250,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-SANDY AROMATIC BAG -FF\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "SANDY AROMATIC BAG -FF\t\t\t",
+                    "productBrand": null,
+                    "quantity": 900,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-GHCL GREEN BAG FF\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "GHCL GREEN BAG FF\t\t\t",
+                    "productBrand": null,
+                    "quantity": 1000,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-I - FLOW 1/2 KG FF --Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "I - FLOW 1/2 KG FF ",
+                    "productBrand": null,
+                    "quantity": 996,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-SABARI 1 KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "SABARI 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 75,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-VIJAYA 1/2KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "VIJAYA 1/2KG FF",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-WHITE NORMAL FF--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "WHITE NORMAL FF",
+                    "productBrand": null,
+                    "quantity": 22270,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-WOW 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "WOW 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 75,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-SUNITHA BAG FF--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "SUNITHA BAG FF",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-I - SWAAD 1 KG  CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "I - SWAAD 1 KG  CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 25,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-SAPAN 1/2 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "SAPAN 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 310,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-SABARI 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "SABARI 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 470,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-WOW 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "WOW 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 7575,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-I - SHUDDH 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "I - SHUDDH 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 75,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-MOMMY'S  1KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "MOMMY'S  1KG FF",
+                    "productBrand": null,
+                    "quantity": 175,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-I - SWAAD 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "I - SWAAD 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 150,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-STILT 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "STILT 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 5510,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-WOW 1 KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "WOW 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 50,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-PVD BAG FF \t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "PVD BAG FF \t\t\t",
+                    "productBrand": null,
+                    "quantity": 2300,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-WOW 1/2 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "WOW 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 16850,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-LAVAN 1 KG  CRYSTRAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "LAVAN 1 KG  CRYSTRAL",
+                    "productBrand": null,
+                    "quantity": 475,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-ANNA 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "ANNA 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 292,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-MOMMY'S  1KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "MOMMY'S  1KG FF",
+                    "productBrand": null,
+                    "quantity": 2000,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-INDUS 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "INDUS 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-SAPAN 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "SAPAN 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 2910,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-SABARI 1 KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "SABARI 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 55,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-I - SWAAD 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "I - SWAAD 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 470,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-LAVAN 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "LAVAN 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 100,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-STILT 1/2 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "STILT 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 450,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-SAPAN 1KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "SAPAN 1KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 375,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-ANNA 1/2 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "ANNA 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 150,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-PONSSEN MASTER BAG -FF\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "PONSSEN MASTER BAG -FF\t\t\t",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-I - SHUDDH 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "I - SHUDDH 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 1620,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-I - FLOW 1 KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "I - FLOW 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 3000,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Consumables-Iodine--Kilogram-",
+                    "productName": "Consumables",
+                    "productGroup": "Iodine",
+                    "productBrand": null,
+                    "quantity": 10,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-SABARI 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "SABARI 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 75,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-ASHOKA 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "ASHOKA 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 2993,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-I - FLOW 1 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "I - FLOW 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 1520,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-I - FLOW 1 KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "I - FLOW 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 350,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)- WHITE LAMINATE  FF\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": " WHITE LAMINATE  FF\t\t\t",
+                    "productBrand": null,
+                    "quantity": 9500,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-SUPERIOR BLUE BAG -FF\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "SUPERIOR BLUE BAG -FF\t\t\t",
+                    "productBrand": null,
+                    "quantity": 4500,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-LAVAN 1 KG  CRYSTRAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "LAVAN 1 KG  CRYSTRAL",
+                    "productBrand": null,
+                    "quantity": 10301,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-ASHOKA 1KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "ASHOKA 1KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 375,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-PONSSEN SUPER SHUDDH BAG FF--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "PONSSEN SUPER SHUDDH BAG FF",
+                    "productBrand": null,
+                    "quantity": 260,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-I - SWAAD 1/2 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "I - SWAAD 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 25,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-STILT 1/2 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "STILT 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 12034,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-S GOLD 1KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "S GOLD 1KG FF",
+                    "productBrand": null,
+                    "quantity": 100,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-ANNA 1/2 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "ANNA 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 1190,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-SANDY'S PURE 1 KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "SANDY'S PURE 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 4900,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-INDUS 1 KG FF--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "INDUS 1 KG FF",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-PONSSEN RATHNA PREMIUM BAG -FF\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "PONSSEN RATHNA PREMIUM BAG -FF\t\t\t",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-I - SWAAD 1/2 KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "I - SWAAD 1/2 KG FF",
+                    "productBrand": null,
+                    "quantity": 34,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-WOW 1 KG CRYSTAL--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "WOW 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 14393,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bundle (unpacked)-VIJAYA 1/2KG FF--Piece-",
+                    "productName": "Bundle (unpacked)",
+                    "productGroup": "VIJAYA 1/2KG FF",
+                    "productBrand": null,
+                    "quantity": 0,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Roll-STILT 1 KG CRYSTAL--Kilogram-",
+                    "productName": "Roll",
+                    "productGroup": "STILT 1 KG CRYSTAL",
+                    "productBrand": null,
+                    "quantity": 1575,
+                    "unit": "Kilogram",
+                    "plantName": "N/A"
+                },
+                {
+                    "productCode": "Bag (unpacked)-GST SRS BAG -FF\t\t\t--Piece-",
+                    "productName": "Bag (unpacked)",
+                    "productGroup": "GST SRS BAG -FF\t\t\t",
+                    "productBrand": null,
+                    "quantity": 1100,
+                    "unit": "Piece",
+                    "plantName": "N/A"
+                }
+            ],
+            "production": [
+                {
+                    "productCode": "Salt-Free Flow (Edible)-SAPAN 1/2 KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "SAPAN 1/2 KG FF",
+                    "quantity": 90,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-ANNA 1 KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "ANNA 1 KG FF",
+                    "quantity": 130,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-I - SHUDDH 1 KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "I - SHUDDH 1 KG FF",
+                    "quantity": 250,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-LAVAN 1 KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "LAVAN 1 KG FF",
+                    "quantity": 160,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-PURE 1 KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "PURE 1 KG FF",
+                    "quantity": 120,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-S GOLD 1KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "S GOLD 1KG FF",
+                    "quantity": 10,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-I - FLOW 1/2 KG FF -Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "I - FLOW 1/2 KG FF ",
+                    "quantity": 120,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-ASHOKA 1 KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "ASHOKA 1 KG FF",
+                    "quantity": 80,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-I - FLOW 1KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "I - FLOW 1KG FF",
+                    "quantity": 370,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-I - SWAAD 1 KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "I - SWAAD 1 KG FF",
+                    "quantity": 100,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-SAPAN 1 KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "SAPAN 1 KG FF",
+                    "quantity": 420,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-MOMMY'S  1KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "MOMMY'S  1KG FF",
+                    "quantity": 20,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-STILT 1/2 KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "STILT 1/2 KG FF",
+                    "quantity": 30,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                },
+                {
+                    "productCode": "Salt-Free Flow (Edible)-SUPER SHUDDH 1KG FF-Bundle (25Kg)--Unit 1 Freeflow",
+                    "productName": "Salt",
+                    "productGroup": "Free Flow (Edible)",
+                    "productBrand": "SUPER SHUDDH 1KG FF",
+                    "quantity": 30,
+                    "unit": "Bundle (25Kg)",
+                    "plantName": "Unit 1 Freeflow"
+                }
+            ],
+            "inventoryUsed": [],
+            "wastages": [],
+            "orderPlaced": []
+        }
+    }
+}

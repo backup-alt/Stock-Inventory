@@ -1,0 +1,12 @@
+{
+  "title": "Recent Stock Entries",
+  "breadcrumb": ["Report", "Recent Stock Entries"],
+  "items": [
+    { "productGroup": "STILT 1 KG FF (Bundle (unpacked))", "quantity": 5510, "unit": "Piece", "status": "normal" },
+    { "productGroup": "STILT 1/2 KG FF (Bundle (unpacked))", "quantity": 12034, "unit": "Piece", "status": "normal" },
+    { "productGroup": "STILT 1 KG CRYSTAL (Bundle (unpacked))", "quantity": 11321, "unit": "Piece", "status": "normal" },
+    { "productGroup": "STILT 1 KG FF (Roll)", "quantity": 0, "unit": "kg", "status": "critical" },
+    { "productGroup": "LAVAN 1 KG FF (Roll)", "quantity": 100, "unit": "kg", "status": "normal" },
+    { "productGroup": "WHITE NORMAL FF (Bag)", "quantity": 22270, "unit": "Piece", "status": "normal" }
+  ]
+}

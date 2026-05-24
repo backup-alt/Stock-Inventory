@@ -1,2 +1,69 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+// Ionic Variables and Theming
+// Mapped to Material Design 3 color system from HTML designs
+
+:root {
+  --ion-color-primary: #005bbf;
+  --ion-color-primary-rgb: 0, 91, 191;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0050a8;
+  --ion-color-primary-tint: #1a6bc5;
+
+  --ion-color-secondary: #466270;
+  --ion-color-secondary-rgb: 70, 98, 112;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #3e5663;
+  --ion-color-secondary-tint: #59727e;
+
+  --ion-color-tertiary: #9e4300;
+  --ion-color-tertiary-rgb: 158, 67, 0;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #8b3b00;
+  --ion-color-tertiary-tint: #a8561a;
+
+  --ion-color-success: #137333;
+  --ion-color-success-rgb: 19, 115, 51;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #11652d;
+  --ion-color-success-tint: #2b8147;
+
+  --ion-color-warning: #B06000;
+  --ion-color-warning-rgb: 176, 96, 0;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #9b5400;
+  --ion-color-warning-tint: #b8701a;
+
+  --ion-color-danger: #ba1a1a;
+  --ion-color-danger-rgb: 186, 26, 26;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #a41717;
+  --ion-color-danger-tint: #c13131;
+
+  --ion-color-medium: #727785;
+  --ion-color-medium-rgb: 114, 119, 133;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #646975;
+  --ion-color-medium-tint: #808591;
+
+  --ion-color-light: #f9f9ff;
+  --ion-color-light-rgb: 249, 249, 255;
+  --ion-color-light-contrast: #191c23;
+  --ion-color-light-contrast-rgb: 25, 28, 35;
+  --ion-color-light-shade: #dbdbe0;
+  --ion-color-light-tint: #fafaff;
+
+  --ion-background-color: #f9f9ff;
+  --ion-background-color-rgb: 249, 249, 255;
+  --ion-text-color: #191c23;
+  --ion-text-color-rgb: 25, 28, 35;
+
+  --ion-toolbar-background: #f9f9ff;
+  --ion-tab-bar-background: #f9f9ff;
+  --ion-item-background: #ffffff;
+}

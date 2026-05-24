@@ -1,0 +1,234 @@
+<!-- Product Info Page - Tab 4 -->
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="loadData($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Pull to refresh"
+      refreshingSpinner="crescent"
+      refreshingText="Refreshing products">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <main class="mt-4 px-4 max-w-5xl mx-auto space-y-gutter pb-8">
+    <!-- Loading State -->
+    <ng-container *ngIf="isLoading">
+      <div class="flex justify-between items-center mb-4">
+        <div><div class="skeleton h-8 w-32 mb-2"></div><div class="skeleton h-4 w-56"></div></div>
+        <div class="skeleton h-8 w-20 rounded-full"></div>
+      </div>
+      <div class="bg-white rounded-lg border border-outline-variant p-4 mb-3">
+        <div class="skeleton h-5 w-48 mb-3"></div>
+        <div class="skeleton h-16 w-full rounded-lg"></div>
+      </div>
+      <div *ngFor="let i of [1,2,3]" class="bg-white rounded-lg border border-outline-variant p-4 mb-3">
+        <div class="skeleton h-4 w-32 mb-3"></div>
+        <div class="skeleton h-10 w-full mb-2"></div>
+        <div class="skeleton h-10 w-full"></div>
+      </div>
+    </ng-container>
+
+    <!-- Error State -->
+    <ng-container *ngIf="hasError && !isLoading">
+      <div class="flex flex-col items-center justify-center py-20 text-center">
+        <span class="material-symbols-outlined text-6xl text-outline-variant mb-4">error_outline</span>
+        <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Unable to load product info</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mb-6">Please try again later.</p>
+        <button class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-label-bold" (click)="loadData()">
+          <span class="material-symbols-outlined text-lg align-middle mr-1">refresh</span> Retry
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Data State -->
+    <ng-container *ngIf="!isLoading && !hasError && data">
+      <!-- Hero -->
+      <section id="product-summary">
+        <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+          <div class="min-w-0">
+            <h2 class="font-headline-lg text-headline-lg text-on-surface">{{data.hero.title}}</h2>
+            <p class="text-on-surface-variant font-body-md">{{data.hero.lotNumber}}</p>
+          </div>
+          <div class="self-start bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-label-bold font-label-bold">
+            {{data.hero.status}}
+          </div>
+        </div>
+      </section>
+
+      <!-- Production Highlights -->
+      <section class="bg-white border border-outline-variant rounded-lg shadow-soft p-card_padding">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-primary filled">analytics</span>
+          <h3 class="font-headline-md text-headline-md">Production Highlights</h3>
+        </div>
+        <div class="bg-surface-container-low p-4 rounded-lg border border-outline-variant/30 flex items-center justify-between">
+          <div>
+            <p class="text-on-surface-variant text-label-bold font-label-bold">Avg Monthly Yield</p>
+            <p class="font-headline-md text-headline-md">{{data.productionHighlights.avgMonthlyYield.value}} <span class="text-body-md font-normal">{{data.productionHighlights.avgMonthlyYield.unit}}</span></p>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant/40 text-4xl">trending_up</span>
+        </div>
+      </section>
+
+      <!-- Recent Stock Entries -->
+      <section class="bg-white border border-outline-variant rounded-lg shadow-soft p-card_padding">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary filled">inventory_2</span>
+            <h3 class="font-headline-md text-headline-md">Recent Stock Entries</h3>
+          </div>
+          <a routerLink="/tabs/recent-entries" class="text-primary font-label-bold hover:underline cursor-pointer">View All</a>
+        </div>
+        <div class="grid gap-3">
+          <div *ngFor="let entry of data.recentEntries; let last = last"
+               class="rounded-lg border border-outline-variant/40 bg-surface-container-lowest p-3 sm:p-4">
+            <div class="flex items-start gap-3">
+              <div class="w-11 h-11 rounded-lg flex shrink-0 items-center justify-center"
+                   [class.bg-primary-container/10]="entry.type === 'inbound'"
+                   [class.text-primary]="entry.type === 'inbound'"
+                   [class.bg-error-container/10]="entry.type === 'outbound'"
+                   [class.text-error]="entry.type === 'outbound'">
+                <span class="material-symbols-outlined">{{entry.icon}}</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="min-w-0">
+                    <p class="font-label-bold text-on-surface break-words">{{entry.label}}</p>
+                    <p class="text-label-bold text-on-surface-variant">{{entry.date}}</p>
+                  </div>
+                  <div class="sm:text-right">
+                    <p class="font-label-bold whitespace-nowrap"
+                       [class.text-primary]="entry.type === 'inbound'"
+                       [class.text-error]="entry.type === 'outbound'">{{entry.quantity}}</p>
+                  </div>
+                </div>
+                <div class="mt-2 inline-flex max-w-full rounded-full bg-surface-container-high px-2.5 py-1">
+                  <p class="text-[11px] font-semibold text-on-surface-variant truncate">{{entry.source}}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Product Inventory Details -->
+      <section id="inventory-details">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-primary filled">list_alt</span>
+          <h3 class="font-headline-md text-headline-md">Product Inventory Details</h3>
+        </div>
+        <div class="space-y-4">
+          <div *ngFor="let category of data.inventoryCategories; let ci = index"
+               class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden">
+            <div class="bg-surface-container-low px-4 py-2 border-b border-outline-variant">
+              <h3 class="font-label-bold text-label-bold uppercase tracking-wider text-on-surface-variant">{{category.title}}</h3>
+            </div>
+            <div class="divide-y divide-outline-variant/30">
+              <div *ngFor="let item of category.items" class="px-4 py-3 flex justify-between items-center">
+                <span class="font-body-md text-on-surface">{{item.name}}</span>
+                <div class="flex items-center gap-4">
+                  <span class="font-body-md font-semibold" [class.text-on-surface-variant]="item.status !== 'critical'" [class.text-error]="item.status === 'critical'">
+                    {{item.quantity}} {{item.unit}}
+                  </span>
+                  <span *ngIf="item.status === 'ok'" class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1">check_circle</span>
+                </div>
+              </div>
+            </div>
+            <!-- View All button per category -->
+            <div class="px-4 pb-4 mt-2">
+              <a [routerLink]="getCategoryRoute(category.title)"
+                 class="block w-full py-3 px-4 border border-outline-variant rounded-md text-primary font-semibold text-body-md hover:bg-surface-container-high transition-colors text-center cursor-pointer">
+                View all
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Update Inventory Button -->
+      <div class="pt-4">
+        <button class="w-full bg-primary text-on-primary h-12 rounded-lg font-label-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
+                (click)="openUpdateInventory()">
+          <span class="material-symbols-outlined">edit</span> Update Inventory
+        </button>
+      </div>
+
+      <!-- Update Inventory Modal -->
+      <div *ngIf="showUpdateInventory"
+           class="fixed inset-0 z-[70] bg-black/30 flex items-end sm:items-center justify-center p-4"
+           (click)="closeUpdateInventory()">
+        <section class="bg-surface rounded-lg shadow-soft-modal border border-outline-variant w-full max-w-md p-4"
+                 (click)="$event.stopPropagation()">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-headline-md text-headline-md text-on-surface">Update Inventory</h2>
+            <button class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant"
+                    (click)="closeUpdateInventory()">
+              <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
+
+          <form class="space-y-4" (ngSubmit)="saveInventoryUpdate()">
+            <label class="block">
+              <span class="font-label-bold text-label-bold text-on-surface-variant uppercase">Category</span>
+              <select class="mt-1 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
+                      [(ngModel)]="selectedCategoryIndex"
+                      name="category"
+                      (ngModelChange)="onCategoryChange()">
+                <option *ngFor="let category of data.inventoryCategories; let ci = index" [ngValue]="ci">{{category.title}}</option>
+              </select>
+            </label>
+
+            <label class="block">
+              <span class="font-label-bold text-label-bold text-on-surface-variant uppercase">Product</span>
+              <select class="mt-1 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
+                      [(ngModel)]="selectedItemIndex"
+                      name="item"
+                      (ngModelChange)="onItemChange()">
+                <option *ngFor="let item of data.inventoryCategories[selectedCategoryIndex].items; let ii = index" [ngValue]="ii">{{item.name}}</option>
+              </select>
+            </label>
+
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="font-label-bold text-label-bold text-on-surface-variant uppercase">Quantity</span>
+                <input class="mt-1 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
+                       type="number"
+                       min="0"
+                       step="0.01"
+                       [(ngModel)]="updateQuantity"
+                       name="quantity">
+              </label>
+
+              <label class="block">
+                <span class="font-label-bold text-label-bold text-on-surface-variant uppercase">Status</span>
+                <select class="mt-1 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
+                        [(ngModel)]="updateStatus"
+                        name="status">
+                  <option value="ok">OK</option>
+                  <option value="low">Low</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="block">
+              <span class="font-label-bold text-label-bold text-on-surface-variant uppercase">Note</span>
+              <input class="mt-1 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
+                     type="text"
+                     placeholder="Supplier, batch, or reason"
+                     [(ngModel)]="updateNote"
+                     name="note">
+            </label>
+
+            <div class="flex gap-2 pt-2">
+              <button type="button"
+                      class="flex-1 h-11 rounded-md border border-outline-variant text-on-surface font-label-bold"
+                      (click)="closeUpdateInventory()">Cancel</button>
+              <button type="submit"
+                      class="flex-1 h-11 rounded-md bg-primary text-on-primary font-label-bold">Save</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </ng-container>
+  </main>
+</ion-content>

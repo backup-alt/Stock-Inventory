@@ -1,17 +1,196 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Tab 1
-    </ion-title>
-  </ion-toolbar>
-</ion-header>
+<!-- Dashboard Page - Tab 1 -->
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="loadData($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Pull to refresh"
+      refreshingSpinner="crescent"
+      refreshingText="Refreshing dashboard">
+    </ion-refresher-content>
+  </ion-refresher>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 1</ion-title>
-    </ion-toolbar>
-  </ion-header>
+  <main class="p-4 md:p-6 max-w-5xl mx-auto w-full">
+    <!-- Loading State -->
+    <ng-container *ngIf="isLoading">
+      <div class="mb-6">
+        <div class="skeleton h-8 w-64 mb-2"></div>
+        <div class="skeleton h-4 w-48 mb-4"></div>
+        <div class="skeleton h-10 w-40 rounded-full"></div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div *ngFor="let i of [1,2,3,4]" class="bg-surface-container-lowest rounded-md p-3 border border-outline-variant/40 shadow-soft">
+          <div class="skeleton h-3 w-20 mb-3"></div>
+          <div class="skeleton h-8 w-16 mb-2"></div>
+          <div class="skeleton h-3 w-24 mt-2"></div>
+        </div>
+      </div>
+    </ng-container>
 
-  <app-explore-container name="Tab 1 page"></app-explore-container>
+    <!-- Error State -->
+    <ng-container *ngIf="hasError && !isLoading">
+      <div class="flex flex-col items-center justify-center py-20 text-center">
+        <span class="material-symbols-outlined text-6xl text-outline-variant mb-4">cloud_off</span>
+        <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Something went wrong</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mb-6">Unable to load dashboard data. Please try again.</p>
+        <button class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-label-bold text-label-bold flex items-center gap-2"
+                (click)="loadData()">
+          <span class="material-symbols-outlined text-lg">refresh</span> Retry
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Data State -->
+    <ng-container *ngIf="!isLoading && !hasError && data">
+      <!-- Header -->
+      <div class="mb-6">
+        <h2 class="font-headline-lg text-[24px] md:text-headline-lg mb-2 text-on-surface font-bold">{{data.greeting}}</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mb-4">{{data.subtitle}}</p>
+        <div class="relative flex flex-col gap-2 items-start">
+          <!-- Date Filter Toggle -->
+          <div class="flex bg-surface-container-high rounded-full p-1 border border-outline-variant/30">
+            <button *ngFor="let period of ['Daily','Weekly','Monthly']"
+                    class="px-4 py-1 rounded-full font-label-bold text-label-bold transition-colors"
+                    [class.bg-primary]="activePeriod === period.toLowerCase()"
+                    [class.text-on-primary]="activePeriod === period.toLowerCase()"
+                    [class.shadow-sm]="activePeriod === period.toLowerCase()"
+                    [class.text-on-surface-variant]="activePeriod !== period.toLowerCase()"
+                    (click)="setPeriod(period.toLowerCase())">{{period}}</button>
+          </div>
+          <button type="button"
+                  class="flex items-center gap-2 bg-surface-container-lowest px-3 py-1.5 rounded-full border border-outline-variant/50 shadow-soft hover:bg-surface-container-high transition-colors"
+                  (click)="openCalendar()">
+            <span class="material-symbols-outlined text-outline">calendar_today</span>
+            <span class="font-label-bold text-label-bold text-on-surface-variant">{{currentDate}}</span>
+          </button>
+          <div *ngIf="showCalendar" class="absolute left-0 top-full mt-2 z-40 w-[292px] rounded-lg border border-outline-variant bg-surface shadow-soft-modal p-3">
+            <div class="flex items-center justify-between mb-3">
+              <button class="p-1 rounded-full hover:bg-surface-container-high" (click)="moveCalendarMonth(-1)">
+                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+              </button>
+              <div class="font-label-bold text-label-bold text-on-surface">{{calendarMonthLabel}}</div>
+              <button class="p-1 rounded-full hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed"
+                      [disabled]="calendarNextDisabled"
+                      (click)="moveCalendarMonth(1)">
+                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-label-bold text-on-surface-variant mb-1">
+              <span *ngFor="let label of weekDayLabels">{{label}}</span>
+            </div>
+            <div class="grid grid-cols-7 gap-1">
+              <button *ngFor="let day of calendarDays"
+                      class="h-8 rounded-md text-[12px] font-label-bold"
+                      [class.text-on-surface-variant]="!day.isCurrentMonth"
+                      [class.text-on-surface]="day.isCurrentMonth && !day.isSelected && !day.isFuture"
+                      [class.opacity-30]="day.isFuture"
+                      [class.cursor-not-allowed]="day.isFuture"
+                      [class.bg-primary]="day.isSelected"
+                      [class.text-on-primary]="day.isSelected"
+                      [class.border]="day.isToday && !day.isSelected"
+                      [class.border-primary]="day.isToday && !day.isSelected"
+                      [disabled]="day.isFuture"
+                      (click)="selectDate(day)">{{day.label}}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Row -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <button *ngFor="let kpi of data.kpis"
+                type="button"
+                class="bg-surface-container-lowest rounded-md p-3 border border-outline-variant/40 shadow-soft flex flex-col justify-between text-left transition-all hover:border-primary/35 hover:bg-primary-container/10 active:scale-[0.98]"
+                (click)="navigateKpi(kpi)">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-[10px]">{{kpi.label}}</span>
+            <span class="material-symbols-outlined text-primary bg-primary-container/20 rounded p-1">{{kpi.icon}}</span>
+          </div>
+          <div class="font-kpi-display-mobile text-[28px] md:text-kpi-display text-on-surface leading-none font-extrabold">{{kpi.value}}</div>
+          <div class="flex items-center mt-2 pt-2 border-t border-surface-variant" *ngIf="kpi.trend">
+            <span class="material-symbols-outlined text-[14px] text-primary">trending_up</span>
+            <span class="font-body-md text-[12px] ml-1 font-semibold text-primary">{{kpi.trend.percentage}}</span>
+          </div>
+          <div class="flex items-center mt-2 pt-2 border-t border-surface-variant text-on-surface-variant" *ngIf="kpi.footer && !kpi.trend">
+            <span class="font-body-md text-[12px] font-semibold">{{kpi.footer}}</span>
+            <span class="material-symbols-outlined text-[14px] ml-auto text-primary">arrow_forward</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Critical Stock Overview + Inventory Breakdown -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <!-- Critical Stock Card -->
+        <div class="md:col-span-8 bg-surface-container-lowest rounded-md border border-outline-variant/40 shadow-soft overflow-hidden">
+          <div class="p-3 flex justify-between items-center border-b border-surface-container-high bg-surface-container-low">
+            <h3 class="font-headline-md text-[16px] font-bold text-on-surface">Critical Stock Overview</h3>
+            <button type="button"
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors"
+                    aria-label="Open stock details"
+                    (click)="openCriticalStock()">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+          <div class="p-3">
+            <button *ngFor="let item of data.criticalStock"
+                    type="button"
+                    class="w-full bg-error-container/20 border-l-4 border-error rounded-r p-3 mb-3 flex items-center justify-between text-left transition-colors hover:bg-error-container/30 active:scale-[0.99]"
+                    (click)="navigateCriticalStock(item)">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-error">warning</span>
+                <div>
+                  <div class="font-label-bold text-[10px] text-error uppercase tracking-wider mb-0.5">{{item.type === 'out-of-stock' ? 'Out of Stock' : 'Low Stock Alert'}}</div>
+                  <div class="font-body-md text-body-md text-on-surface font-bold">{{item.name}}</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="font-headline-md text-[20px] font-bold text-error">{{item.quantity}} <span class="text-[12px] font-normal">{{item.unit}}</span></div>
+              </div>
+            </button>
+            <button *ngFor="let item of data.normalStock"
+                    type="button"
+                    class="w-full flex items-center justify-between p-3 border border-surface-container-highest rounded bg-surface-container-lowest text-left transition-colors hover:border-primary/30 hover:bg-primary-container/10 active:scale-[0.99]"
+                    (click)="navigateNormalStock()">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary bg-primary-container/10 p-1.5 rounded">{{item.icon}}</span>
+                <div class="font-body-md text-body-md text-on-surface font-bold">{{item.name}}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-headline-md text-[20px] font-bold text-on-surface">{{item.quantity | number}} <span class="text-[12px] font-normal text-on-surface-variant">{{item.unit}}</span></div>
+                <div class="inline-flex items-center bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded font-label-bold text-[10px] mt-0.5">{{item.status}}</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Inventory Breakdown -->
+        <div class="md:col-span-4 flex flex-col gap-3">
+          <div class="bg-surface-container-lowest rounded-md border border-outline-variant/40 shadow-soft h-full flex flex-col">
+            <div class="p-3 border-b border-surface-container-high bg-surface-container-low">
+              <h3 class="font-headline-md text-[16px] font-bold text-on-surface">Inventory Breakdown</h3>
+            </div>
+            <div class="p-3 flex-1">
+              <div class="grid grid-cols-2 gap-2 h-full">
+                <button *ngFor="let item of data.inventoryBreakdown"
+                     type="button"
+                     class="bg-surface-container rounded p-3 flex flex-col justify-center items-center text-center border relative transition-colors hover:border-primary/35 hover:bg-primary-container/10 active:scale-[0.98]"
+                     [class.border-outline-variant/20]="!item.alert"
+                     [class.border-error/40]="item.alert"
+                     [class.bg-error-container/5]="item.alert"
+                     (click)="navigateBreakdown(item)">
+                  <div *ngIf="item.alert" class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-error"></div>
+                  <span class="material-symbols-outlined mb-1 text-[24px]"
+                        [class.text-secondary]="item.color === 'secondary'"
+                        [class.text-primary]="item.color === 'primary'"
+                        [class.text-tertiary]="item.color === 'tertiary'"
+                        [class.text-on-surface-variant]="item.color === 'on-surface-variant'">{{item.icon}}</span>
+                  <div class="font-kpi-display-mobile text-[20px] text-on-surface mb-1 leading-none font-extrabold">{{item.value}}</div>
+                  <div class="font-label-bold text-[10px] text-on-surface-variant uppercase tracking-wider">{{item.label}}</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </main>
 </ion-content>

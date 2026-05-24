@@ -1,0 +1,104 @@
+<!-- Bundle Inventory Page -->
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="loadData($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Pull to refresh"
+      refreshingSpinner="crescent"
+      refreshingText="Refreshing inventory">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <main class="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col gap-gutter">
+    <!-- Loading State -->
+    <ng-container *ngIf="isLoading">
+      <div class="skeleton h-3 w-32 mb-2"></div>
+      <div class="skeleton h-8 w-48 mb-1"></div>
+      <div class="skeleton h-4 w-64 mb-6"></div>
+      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+        <div class="bg-surface-container-low p-4 border-b border-outline-variant flex gap-6">
+          <div class="skeleton h-3 w-28"></div>
+          <div class="skeleton h-3 w-16 ml-auto"></div>
+          <div class="skeleton h-3 w-12"></div>
+          <div class="skeleton h-3 w-16"></div>
+        </div>
+        <div *ngFor="let i of [1,2,3,4,5,6]" class="p-4 border-b border-outline-variant flex gap-6">
+          <div class="skeleton h-4 w-36"></div>
+          <div class="skeleton h-4 w-14 ml-auto"></div>
+          <div class="skeleton h-4 w-12"></div>
+          <div class="skeleton h-5 w-20 rounded"></div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Error State -->
+    <ng-container *ngIf="hasError && !isLoading">
+      <div class="flex flex-col items-center justify-center py-20 text-center">
+        <span class="material-symbols-outlined text-6xl text-outline-variant mb-4">error_outline</span>
+        <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Unable to load Bundle Inventory</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mb-6">Please try again later.</p>
+        <button class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-label-bold text-label-bold flex items-center gap-2"
+                (click)="loadData()">
+          <span class="material-symbols-outlined text-lg">refresh</span> Retry
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Data State -->
+    <ng-container *ngIf="!isLoading && !hasError && data">
+      <!-- Breadcrumb -->
+      <div class="flex items-center gap-2 text-on-surface font-label-bold text-label-bold">
+        <a class="hover:text-primary transition-colors text-on-surface-variant" routerLink="/tabs/product-info">{{data.breadcrumb[0]}}</a>
+        <span class="material-symbols-outlined text-[16px] text-on-surface-variant">chevron_right</span>
+        <span class="text-primary font-semibold">{{data.breadcrumb[1]}}</span>
+      </div>
+
+      <!-- Header -->
+      <h1 class="font-headline-lg text-headline-lg text-on-surface mt-2">{{data.title}}</h1>
+      <p class="font-body-lg text-body-lg text-on-surface-variant">{{data.description}}</p>
+
+      <!-- Data Table -->
+      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden w-full mt-2">
+        <div class="table-container w-full overflow-x-auto">
+          <table class="w-full text-left border-collapse min-w-[500px]">
+            <thead class="bg-surface-container-low border-b border-outline-variant">
+              <tr>
+                <th class="p-4 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider whitespace-nowrap">Product Group</th>
+                <th class="p-4 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider text-right whitespace-nowrap">Quantity</th>
+                <th class="p-4 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider whitespace-nowrap">Unit</th>
+                <th class="p-4 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider text-center whitespace-nowrap">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-outline-variant">
+              <tr *ngFor="let item of data.items"
+                  class="hover:bg-surface-container-low transition-colors"
+                  [class.bg-error-container/10]="item.status === 'out-of-stock'">
+                <td class="p-4 font-body-md font-medium whitespace-nowrap"
+                    [class.text-on-surface]="item.status !== 'out-of-stock'"
+                    [class.text-error]="item.status === 'out-of-stock'">{{item.productGroup}}</td>
+                <td class="p-4 font-body-md text-right whitespace-nowrap"
+                    [class.text-on-surface]="item.status !== 'out-of-stock'"
+                    [class.text-error]="item.status === 'out-of-stock'">{{item.quantity | number}}</td>
+                <td class="p-4 font-body-md whitespace-nowrap"
+                    [class.text-on-surface-variant]="item.status !== 'out-of-stock'"
+                    [class.text-error]="item.status === 'out-of-stock'">{{item.unit}}</td>
+                <td class="p-4 text-center whitespace-nowrap">
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded font-label-bold text-[10px] uppercase"
+                        [class.bg-status-green-bg]="item.status === 'in-stock'"
+                        [class.text-status-green-text]="item.status === 'in-stock'"
+                        [class.bg-status-yellow-bg]="item.status === 'low-stock'"
+                        [class.text-status-yellow-text]="item.status === 'low-stock'"
+                        [class.bg-error-container]="item.status === 'out-of-stock'"
+                        [class.text-on-error-container]="item.status === 'out-of-stock'">
+                    <span class="material-symbols-outlined text-[14px]">{{getStatusIcon(item.status)}}</span>
+                    {{getStatusLabel(item.status)}}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ng-container>
+  </main>
+</ion-content>

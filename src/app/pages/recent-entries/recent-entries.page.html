@@ -1,0 +1,83 @@
+<!-- Recent Stock Entries Page -->
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="loadData($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Pull to refresh"
+      refreshingSpinner="crescent"
+      refreshingText="Refreshing entries">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <main class="pt-4 px-4 md:px-8 max-w-3xl mx-auto space-y-stack_gap pb-8">
+    <!-- Loading State -->
+    <ng-container *ngIf="isLoading">
+      <div class="skeleton h-4 w-40 mb-2"></div>
+      <div class="skeleton h-7 w-56 mb-6"></div>
+      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+        <div class="grid grid-cols-12 gap-2 p-4 bg-surface-container-low border-b border-outline-variant/50">
+          <div class="col-span-6"><div class="skeleton h-3 w-32"></div></div>
+          <div class="col-span-3"><div class="skeleton h-3 w-16 ml-auto"></div></div>
+          <div class="col-span-3"><div class="skeleton h-3 w-12"></div></div>
+        </div>
+        <div *ngFor="let i of [1,2,3,4,5]" class="grid grid-cols-12 gap-2 p-4 border-b border-outline-variant/20">
+          <div class="col-span-6"><div class="skeleton h-4 w-48"></div></div>
+          <div class="col-span-3"><div class="skeleton h-4 w-14 ml-auto"></div></div>
+          <div class="col-span-3"><div class="skeleton h-4 w-12"></div></div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Error State -->
+    <ng-container *ngIf="hasError && !isLoading">
+      <div class="flex flex-col items-center justify-center py-20 text-center">
+        <span class="material-symbols-outlined text-6xl text-outline-variant mb-4">error_outline</span>
+        <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Unable to load Recent Entries</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mb-6">Please check your connection and try again.</p>
+        <button class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-label-bold text-label-bold flex items-center gap-2"
+                (click)="loadData()">
+          <span class="material-symbols-outlined text-lg">refresh</span> Retry
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Data State -->
+    <ng-container *ngIf="!isLoading && !hasError && data">
+      <!-- Breadcrumb -->
+      <nav aria-label="Breadcrumb" class="flex items-center gap-1 text-on-surface-variant text-xs px-2">
+        <a class="hover:text-primary transition-colors" routerLink="/tabs/overall-report">{{data.breadcrumb[0]}}</a>
+        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+        <span class="font-semibold">{{data.breadcrumb[1]}}</span>
+      </nav>
+
+      <h1 class="text-2xl font-bold text-on-surface mb-4 px-2">{{data.title}}</h1>
+
+      <!-- Data Table -->
+      <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-outline-variant/50 overflow-hidden">
+        <!-- Table Header -->
+        <div class="grid grid-cols-12 gap-2 p-4 bg-surface-container-low border-b border-outline-variant/50 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">
+          <div class="col-span-6">Product Group</div>
+          <div class="col-span-3 text-right">Quantity</div>
+          <div class="col-span-3 pl-2">Unit</div>
+        </div>
+        <!-- Table Rows -->
+        <div class="divide-y divide-outline-variant/30">
+          <div *ngFor="let item of data.items"
+               class="grid grid-cols-12 gap-2 p-4 items-center transition-colors"
+               [class.hover:bg-surface-container-low/50]="item.status !== 'critical'"
+               [class.bg-error-container/30]="item.status === 'critical'"
+               [class.border-l-4]="item.status === 'critical'"
+               [class.border-error]="item.status === 'critical'">
+            <div class="col-span-6 font-body-md text-on-surface">{{item.productGroup}}</div>
+            <div class="col-span-3 text-right font-headline-md text-headline-md"
+                 [class.text-error]="item.status === 'critical'"
+                 [class.text-on-surface]="item.status !== 'critical'">{{item.quantity | number}}</div>
+            <div class="col-span-3 pl-2 font-body-md"
+                 [class.text-error]="item.status === 'critical'"
+                 [class.text-on-surface-variant]="item.status !== 'critical'">{{item.unit}}</div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </main>
+</ion-content>

@@ -1,1 +1,139 @@
+:host {
+  --app-toolbar-height: 56px;
+  --app-tabbar-height: 68px;
+  --app-header-height: calc(var(--app-toolbar-height) + env(safe-area-inset-top));
+  --app-bottom-nav-height: calc(var(--app-tabbar-height) + env(safe-area-inset-bottom));
 
+  display: block;
+  min-height: 100vh;
+}
+
+header {
+  height: var(--app-header-height);
+  padding-top: env(safe-area-inset-top);
+}
+
+header > div {
+  min-width: 0;
+}
+
+header h1 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+header button {
+  flex: 0 0 auto;
+}
+
+.app-content {
+  position: fixed;
+  top: var(--app-header-height);
+  right: 0;
+  bottom: var(--app-bottom-nav-height);
+  left: 0;
+  background: #f9f9ff;
+}
+
+.app-content ion-tabs {
+  width: 100%;
+  height: 100%;
+}
+
+.side-nav-item-active {
+  background: #e8f1ff;
+  color: #005bbf;
+}
+
+.mobile-bottom-nav {
+  height: var(--app-bottom-nav-height);
+  min-height: var(--app-bottom-nav-height);
+  align-items: flex-start;
+  padding-top: 6px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-tab-item {
+  min-width: 0;
+  min-height: 54px;
+  border-radius: 12px;
+  color: #4f5665;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.mobile-tab-item span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-tab-item.active-tab {
+  background: #e8f1ff;
+  color: #005bbf;
+}
+
+@media (max-width: 360px) {
+  :host {
+    --app-tabbar-height: 64px;
+  }
+
+  .mobile-bottom-nav {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .mobile-tab-item {
+    gap: 2px;
+    border-radius: 10px;
+  }
+
+  .mobile-tab-item .material-symbols-outlined {
+    font-size: 22px;
+  }
+
+  .mobile-tab-item span:last-child {
+    font-size: 9px;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  :host {
+    --app-tabbar-height: 72px;
+  }
+
+  .mobile-bottom-nav {
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .mobile-tab-item {
+    max-width: 144px;
+  }
+}
+
+@media (min-width: 768px) {
+  .app-content {
+    bottom: 0;
+    left: 18rem;
+  }
+
+  .universal-side-nav {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+}
+
+@media print {
+  header,
+  .universal-side-nav,
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  .app-content {
+    position: static;
+    inset: auto;
+  }
+}
