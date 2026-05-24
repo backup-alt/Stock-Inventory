@@ -185,10 +185,11 @@ export class ReportService {
     return this.tableReport('Production Details', 'Report > Production Details', summary.data.reports.production || []);
   }
 
-  async recentEntries() {
+  async recentEntries(query) {
+    const filter = parseReportFilter(query);
     const summary = await this.summarySource();
-    const updates = await this.inventoryService.recentUpdates();
-    return recentEntriesReport('Recent Stock Entries', 'Report > Recent Stock Entries', summary.data.reports.stockEntry || [], updates);
+    const updates = await this.inventoryService.recentUpdates({ filter });
+    return recentEntriesReport('Recent Stock Entries', 'Report > Recent Stock Entries', summary.data.reports.stockEntry || [], updates, filter);
   }
 
   async summarySource() {
@@ -307,7 +308,7 @@ function recentStockEntries(rows, updates = [], limit = 4) {
   return [...ownerEntries, ...apiEntries].slice(0, limit);
 }
 
-function recentEntriesReport(title, description, rows, updates = []) {
+function recentEntriesReport(title, description, rows, updates = [], filter = null) {
   const updateItems = updates.map((update) => ({
     productGroup: cleanText(update.productGroup),
     category: cleanText(update.category),
@@ -316,6 +317,7 @@ function recentEntriesReport(title, description, rows, updates = []) {
     quantity: numberOrZero(update.quantity),
     unit: shortUnit(update.unit),
     status: stockStatus(update.quantity),
+    createdAt: update.createdAt,
   }));
   const apiItems = rows.map((row) => {
     const quantity = numberOrZero(row.quantity);
@@ -334,8 +336,9 @@ function recentEntriesReport(title, description, rows, updates = []) {
   return {
     title,
     description,
+    filter,
     breadcrumb: description.split('>').map((item) => item.trim()),
-    items: [...updateItems, ...apiItems],
+    items: filter ? updateItems : [...updateItems, ...apiItems],
   };
 }
 

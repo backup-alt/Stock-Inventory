@@ -189,6 +189,37 @@ test('inventory detail filters use saved update timestamps', async () => {
   assert.ok(!oldPayload.items.some((item) => item.productGroup === productGroup));
 });
 
+test('recent stock entries are filtered to saved owner updates', async () => {
+  const productGroup = 'Recent Mobile Entry';
+  await fetchApi('/api/inventory/updates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      category: 'Packaging - Bags',
+      productGroup,
+      quantity: 33,
+      unit: 'Piece',
+      note: 'Entered from mobile',
+    }),
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [todayResponse, oldResponse] = await Promise.all([
+    fetchApi(`/api/reports/recent-entries?period=daily&date=${today}`),
+    fetchApi('/api/reports/recent-entries?period=daily&date=2001-01-01'),
+  ]);
+  const todayPayload = await todayResponse.json();
+  const oldPayload = await oldResponse.json();
+  const entry = todayPayload.items.find((item) => item.productGroup === productGroup);
+
+  assert.equal(todayResponse.status, 200);
+  assert.equal(oldResponse.status, 200);
+  assert.equal(entry.category, 'Packaging - Bags');
+  assert.equal(entry.note, 'Entered from mobile');
+  assert.equal(entry.quantity, 33);
+  assert.equal(oldPayload.items.length, 0);
+});
+
 test('future report dates are rejected', async () => {
   const response = await fetchApi('/api/reports/overall?period=daily&date=2999-01-01');
   const payload = await response.json();

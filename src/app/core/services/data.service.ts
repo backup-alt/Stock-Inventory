@@ -69,8 +69,8 @@ export class DataService {
     return this.getData<InventoryTableData>('/api/reports/production-log');
   }
 
-  getRecentEntries(): Observable<InventoryTableData> {
-    return this.getData<InventoryTableData>('/api/reports/recent-entries');
+  getRecentEntries(filter?: DateFilterParams): Observable<InventoryTableData> {
+    return this.getData<InventoryTableData>('/api/reports/recent-entries', filter);
   }
 
   createInventoryUpdate(payload: InventoryUpdateRequest): Observable<InventoryUpdateResponse> {

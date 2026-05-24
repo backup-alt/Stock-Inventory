@@ -52,13 +52,71 @@
 
       <h1 class="text-2xl font-bold text-on-surface mb-4 px-2">{{data.title}}</h1>
 
+      <div class="relative flex flex-col items-center gap-2 w-full">
+        <div class="flex items-center justify-center w-full max-w-[360px] bg-surface-container p-1 rounded-full border border-outline-variant/30">
+          <button *ngFor="let period of ['Daily','Weekly','Monthly']"
+                  class="flex-1 px-4 py-1.5 rounded-full font-label-bold text-label-bold text-center transition-colors"
+                  [class.bg-surface-container-lowest]="activePeriod === period.toLowerCase()"
+                  [class.shadow-sm]="activePeriod === period.toLowerCase()"
+                  [class.border]="activePeriod === period.toLowerCase()"
+                  [class.border-outline-variant/20]="activePeriod === period.toLowerCase()"
+                  [class.text-on-surface]="activePeriod === period.toLowerCase()"
+                  [class.text-on-surface-variant]="activePeriod !== period.toLowerCase()"
+                  (click)="setPeriod(period.toLowerCase())">{{period}}</button>
+          <div class="w-px h-6 bg-outline-variant/50 mx-2"></div>
+          <button type="button"
+                  class="p-2 rounded-full text-on-surface-variant hover:text-primary transition-colors"
+                  (click)="openCalendar()">
+            <span class="material-symbols-outlined text-[20px]">calendar_today</span>
+          </button>
+        </div>
+        <p class="font-label-bold text-[12px] text-on-surface-variant">{{currentDate}}</p>
+        <div *ngIf="showCalendar" class="absolute right-0 top-full mt-2 z-40 w-[292px] rounded-lg border border-outline-variant bg-surface shadow-soft-modal p-3">
+          <div class="flex items-center justify-between mb-3">
+            <button class="p-1 rounded-full hover:bg-surface-container-high" (click)="moveCalendarMonth(-1)">
+              <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </button>
+            <div class="font-label-bold text-label-bold text-on-surface">{{calendarMonthLabel}}</div>
+            <button class="p-1 rounded-full hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed"
+                    [disabled]="calendarNextDisabled"
+                    (click)="moveCalendarMonth(1)">
+              <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-label-bold text-on-surface-variant mb-1">
+            <span *ngFor="let label of weekDayLabels">{{label}}</span>
+          </div>
+          <div class="grid grid-cols-7 gap-1">
+            <button *ngFor="let day of calendarDays"
+                    class="h-8 rounded-md text-[12px] font-label-bold"
+                    [class.text-on-surface-variant]="!day.isCurrentMonth"
+                    [class.text-on-surface]="day.isCurrentMonth && !day.isSelected && !day.isFuture"
+                    [class.opacity-30]="day.isFuture"
+                    [class.cursor-not-allowed]="day.isFuture"
+                    [class.bg-primary]="day.isSelected"
+                    [class.text-on-primary]="day.isSelected"
+                    [class.border]="day.isToday && !day.isSelected"
+                    [class.border-primary]="day.isToday && !day.isSelected"
+                    [disabled]="day.isFuture"
+                    (click)="selectDate(day)">{{day.label}}</button>
+          </div>
+        </div>
+      </div>
+
       <div class="grid gap-3">
+        <div *ngIf="data.items.length === 0"
+             class="rounded-xl border border-outline-variant/50 bg-surface-container-lowest p-6 text-center shadow-soft">
+          <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2">inventory_2</span>
+          <p class="font-label-bold text-on-surface">No stock entries for this period</p>
+          <p class="mt-1 text-[12px] font-semibold text-on-surface-variant">Try Daily, Weekly, or Monthly to review saved owner updates.</p>
+        </div>
         <article *ngFor="let item of data.items"
                  class="rounded-xl border border-outline-variant/50 bg-surface-container-lowest p-4 shadow-soft">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">{{item.category || item.subLabel || 'Stock Entry'}}</p>
               <h2 class="mt-1 font-label-bold text-on-surface break-words">{{item.productGroup}}</h2>
+              <p *ngIf="item.createdAt" class="mt-1 text-[11px] font-semibold text-on-surface-variant">{{item.createdAt | date:'MMM d, h:mm a'}}</p>
             </div>
             <div class="shrink-0 text-right">
               <p class="font-headline-md text-headline-md text-on-surface">{{item.quantity | number}}</p>

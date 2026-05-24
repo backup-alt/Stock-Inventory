@@ -158,14 +158,17 @@ export class InventoryService {
     };
   }
 
-  async recentUpdates(limit = undefined) {
+  async recentUpdates(options = undefined) {
     await this.ensureUpdatesLoaded();
+    const limit = typeof options === 'number' ? options : options?.limit;
+    const filter = typeof options === 'number' ? null : options?.filter;
+    const updates = filter ? this.updates.filter((update) => updateMatchesFilter(update, filter)) : this.updates;
 
     if (typeof limit === 'number') {
-      return this.updates.slice(0, limit);
+      return updates.slice(0, limit);
     }
 
-    return [...this.updates];
+    return [...updates];
   }
 
   async stockSource() {

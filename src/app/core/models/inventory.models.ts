@@ -186,6 +186,7 @@ export interface InventoryTableItem {
   category?: string;
   subLabel?: string | null;
   note?: string;
+  createdAt?: string;
   quantity: number;
   unit: string;
   status: string;
