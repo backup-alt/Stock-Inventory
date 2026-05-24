@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ledgerflow-api
+    runtime: node
+    plan: free
+    buildCommand: cd ledgerflow-api && npm install
+    startCommand: cd ledgerflow-api && npm run start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
