@@ -39,6 +39,10 @@ export class RecentEntriesPage implements OnInit {
   }
 
   private completeRefresh(refresher?: any) {
-    refresher?.target?.complete();
+    if (!refresher) {
+      return;
+    }
+
+    setTimeout(() => refresher.target?.complete(), 500);
   }
 }

@@ -9,7 +9,7 @@ import { ReportService } from './services/report-service.js';
 export function createApp(options = {}) {
   const settings = { ...config, ...options };
   const store = new JsonStore(settings);
-  const inventoryService = new InventoryService(store);
+  const inventoryService = new InventoryService(store, settings);
   const reportService = new ReportService(store, inventoryService);
   const router = new Router({ settings, inventoryService, reportService });
 

@@ -9,3 +9,5 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20
+      - key: LEDGERFLOW_UPDATES_FILE
+        value: /tmp/inventory-updates.json

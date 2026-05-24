@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { HttpError } from '../http/http-error.js';
 import { cleanText, numberOrZero, shortUnit, titleFromSlug } from '../domain/strings.js';
 import { rawSaltStock } from '../domain/stock-source.js';
@@ -15,12 +17,15 @@ const categoryTitles = {
 };
 
 export class InventoryService {
-  constructor(store) {
+  constructor(store, settings = {}) {
     this.store = store;
+    this.updatesFile = settings.updatesFile;
     this.updates = [];
+    this.updatesLoaded = false;
   }
 
   async summary() {
+    await this.ensureUpdatesLoaded();
     const source = await this.stockSource();
     const categories = source.data.inventory.map((category) => {
       const products = category.products || [];
@@ -45,6 +50,8 @@ export class InventoryService {
   }
 
   async category(slug) {
+    await this.ensureUpdatesLoaded();
+
     if (slug === 'packaging') {
       return this.packaging('all');
     }
@@ -86,6 +93,7 @@ export class InventoryService {
   }
 
   async packaging(mode = 'all') {
+    await this.ensureUpdatesLoaded();
     const [rolls, bags] = await Promise.all([
       this.productRows('Roll'),
       this.productRows('Bag (unpacked)'),
@@ -109,6 +117,7 @@ export class InventoryService {
   }
 
   async createUpdate(payload) {
+    await this.ensureUpdatesLoaded();
     const quantity = Number(payload.quantity);
     const categorySlug = categorySlugFromLabel(payload.category);
 
@@ -133,6 +142,7 @@ export class InventoryService {
     };
 
     this.updates.unshift(update);
+    await this.persistUpdates();
 
     return {
       success: true,
@@ -145,6 +155,7 @@ export class InventoryService {
   }
 
   async productRows(productName) {
+    await this.ensureUpdatesLoaded();
     const source = await this.stockSource();
     const category = source.data.inventory.find((item) => cleanText(item.productName) === productName);
     const categorySlug = categorySlugFromProductName(productName);
@@ -158,6 +169,7 @@ export class InventoryService {
   }
 
   async crystallineRows() {
+    await this.ensureUpdatesLoaded();
     const source = await this.stockSource();
     const rows = (source.data.finishedGoods || []).flatMap((plant) => {
       return (plant.groups || [])
@@ -241,6 +253,40 @@ export class InventoryService {
       seen.add(key);
       return true;
     });
+  }
+
+  async ensureUpdatesLoaded() {
+    if (this.updatesLoaded) {
+      return;
+    }
+
+    this.updatesLoaded = true;
+
+    if (!this.updatesFile) {
+      return;
+    }
+
+    try {
+      const contents = await readFile(this.updatesFile, 'utf8');
+      const value = JSON.parse(contents);
+      this.updates = Array.isArray(value) ? value : [];
+    } catch (error) {
+      if (error?.code !== 'ENOENT') {
+        throw error;
+      }
+
+      this.updates = [];
+      await this.persistUpdates();
+    }
+  }
+
+  async persistUpdates() {
+    if (!this.updatesFile) {
+      return;
+    }
+
+    await mkdir(dirname(this.updatesFile), { recursive: true });
+    await writeFile(this.updatesFile, `${JSON.stringify(this.updates, null, 2)}\n`);
   }
 }
 

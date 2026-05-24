@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timer } from 'rxjs';
+import { retry } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   DashboardData,
@@ -71,6 +72,11 @@ export class DataService {
   }
 
   private getData<T>(apiPath: string): Observable<T> {
-    return this.http.get<T>(`${this.apiBaseUrl}${apiPath}`, { headers: this.apiHeaders });
+    return this.http.get<T>(`${this.apiBaseUrl}${apiPath}`, { headers: this.apiHeaders }).pipe(
+      retry({
+        count: 5,
+        delay: () => timer(2000),
+      })
+    );
   }
 }

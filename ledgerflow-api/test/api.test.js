@@ -1,13 +1,20 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import { createApp } from '../src/app.js';
 
 let server;
 let baseUrl;
+let tempDir;
+let updatesFile;
 const apiKey = 'test-key';
 
 before(async () => {
-  server = createApp({ clientApiKey: apiKey });
+  tempDir = await mkdtemp(join(tmpdir(), 'ledgerflow-api-'));
+  updatesFile = join(tempDir, 'inventory-updates.json');
+  server = createApp({ clientApiKey: apiKey, updatesFile });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   baseUrl = `http://${address.address}:${address.port}`;
@@ -15,6 +22,7 @@ before(async () => {
 
 after(async () => {
   await new Promise((resolve) => server.close(resolve));
+  await rm(tempDir, { recursive: true, force: true });
 });
 
 test('health endpoint returns the service status', async () => {
@@ -95,6 +103,37 @@ test('custom inventory update entries are appended to category responses', async
   assert.equal(customItem.quantity, 12);
   assert.equal(customItem.unit, 'Piece');
   assert.equal(customItem.status, 'low-stock');
+});
+
+test('inventory updates are persisted to json and loaded by a new server', async () => {
+  const productGroup = 'Persisted Owner Bundle';
+  const updateResponse = await fetchApi('/api/inventory/updates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      category: 'Bundle (unpacked)',
+      productGroup,
+      quantity: 24,
+      unit: 'Piece',
+      note: 'Persistence check',
+    }),
+  });
+  const savedUpdates = JSON.parse(await readFile(updatesFile, 'utf8'));
+  const secondServer = createApp({ clientApiKey: apiKey, updatesFile });
+
+  await new Promise((resolve) => secondServer.listen(0, '127.0.0.1', resolve));
+  const address = secondServer.address();
+  const secondBaseUrl = `http://${address.address}:${address.port}`;
+  const bundlesResponse = await fetch(`${secondBaseUrl}/api/inventory/bundles`, {
+    headers: { 'x-ledgerflow-api-key': apiKey },
+  });
+  const bundles = await bundlesResponse.json();
+  const customItem = bundles.items.find((item) => item.productGroup === productGroup);
+  await new Promise((resolve) => secondServer.close(resolve));
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(savedUpdates[0].productGroup, productGroup);
+  assert.equal(customItem.quantity, 24);
 });
 
 test('future report dates are rejected', async () => {

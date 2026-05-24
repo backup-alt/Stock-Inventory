@@ -232,7 +232,11 @@ export class Tab1Page implements OnInit {
   }
 
   private completeRefresh(refresher?: any) {
-    refresher?.target?.complete();
+    if (!refresher) {
+      return;
+    }
+
+    setTimeout(() => refresher.target?.complete(), 500);
   }
 
   private isNextMonthFuture(): boolean {

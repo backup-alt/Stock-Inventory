@@ -9,6 +9,7 @@ export const config = {
   host: process.env.HOST || '0.0.0.0',
   port: Number(process.env.PORT || 8080),
   dataDir: process.env.LEDGERFLOW_DATA_DIR || resolve(rootDir, '..', 'src', 'assets', 'data'),
+  updatesFile: process.env.LEDGERFLOW_UPDATES_FILE || resolve(rootDir, 'data', 'inventory-updates.json'),
   maxBodyBytes: Number(process.env.MAX_BODY_BYTES || 1_000_000),
   clientApiKey: process.env.LEDGERFLOW_API_KEY || embeddedClientApiKey,
   clientApiKeyHeader: process.env.LEDGERFLOW_API_KEY_HEADER || 'x-ledgerflow-api-key',
