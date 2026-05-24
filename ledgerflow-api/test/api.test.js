@@ -55,6 +55,7 @@ test('dashboard explains raw stock weight without compact units', async () => {
 test('inventory updates are accepted and reflected in category responses', async () => {
   const updateResponse = await fetchApi('/api/inventory/updates', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       category: 'Packaging - Rolls',
       productGroup: 'STILT 1 KG FF',
@@ -71,6 +72,29 @@ test('inventory updates are accepted and reflected in category responses', async
   assert.equal(update.success, true);
   assert.equal(updatedItem.quantity, 55);
   assert.equal(updatedItem.status, 'low-stock');
+});
+
+test('custom inventory update entries are appended to category responses', async () => {
+  const productGroup = 'Owner Test Bundle';
+  const updateResponse = await fetchApi('/api/inventory/updates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      category: 'Bundle (unpacked)',
+      productGroup,
+      quantity: 12,
+      unit: 'Piece',
+      note: 'Custom owner entry',
+    }),
+  });
+  const bundlesResponse = await fetchApi('/api/inventory/bundles');
+  const bundles = await bundlesResponse.json();
+  const customItem = bundles.items.find((item) => item.productGroup === productGroup);
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(customItem.quantity, 12);
+  assert.equal(customItem.unit, 'Piece');
+  assert.equal(customItem.status, 'low-stock');
 });
 
 test('future report dates are rejected', async () => {
@@ -92,6 +116,6 @@ test('api endpoints require the generated key', async () => {
 function fetchApi(path, options = {}) {
   return fetch(`${baseUrl}${path}`, {
     ...options,
-    headers: { 'x-ledgerflow-api-key': apiKey },
+    headers: { ...(options.headers || {}), 'x-ledgerflow-api-key': apiKey },
   });
 }

@@ -146,6 +146,7 @@ export interface InventoryUpdateRequest {
   category: string;
   productGroup: string;
   quantity: number;
+  unit?: string;
   note?: string;
 }
 
@@ -157,6 +158,7 @@ export interface InventoryUpdateResponse {
     categorySlug: string;
     productGroup: string;
     quantity: number;
+    unit: string;
     status: StockStatus;
     note: string;
     createdAt: string;

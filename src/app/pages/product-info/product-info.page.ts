@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { DataService } from '../../core/services/data.service';
-import { ProductInfoData, RecentEntry } from '../../core/models/inventory.models';
+import { InventoryCategory, InventoryItem, ProductInfoData, RecentEntry } from '../../core/models/inventory.models';
+
+type ProductEntryMode = 'existing' | 'custom';
 
 @Component({
   selector: 'app-product-info',
@@ -15,6 +17,9 @@ export class ProductInfoPage implements OnInit {
   showUpdateInventory = false;
   selectedCategoryIndex = 0;
   selectedItemIndex = 0;
+  productEntryMode: ProductEntryMode = 'existing';
+  customProductName = '';
+  customUnit = '';
   updateQuantity = 0;
   updateNote = '';
   isSavingUpdate = false;
@@ -48,6 +53,11 @@ export class ProductInfoPage implements OnInit {
   openUpdateInventory() {
     this.selectedCategoryIndex = 0;
     this.selectedItemIndex = 0;
+    this.productEntryMode = 'existing';
+    this.customProductName = '';
+    this.customUnit = this.defaultUnitForSelectedCategory();
+    this.updateNote = '';
+    this.updateError = '';
     this.syncUpdateForm();
     this.showUpdateInventory = true;
   }
@@ -62,11 +72,27 @@ export class ProductInfoPage implements OnInit {
 
   onCategoryChange() {
     this.selectedItemIndex = 0;
+    this.productEntryMode = 'existing';
+    this.customProductName = '';
+    this.customUnit = this.defaultUnitForSelectedCategory();
     this.syncUpdateForm();
   }
 
   onItemChange() {
     this.syncUpdateForm();
+  }
+
+  setProductEntryMode(mode: ProductEntryMode) {
+    this.productEntryMode = mode;
+    this.updateError = '';
+
+    if (mode === 'existing') {
+      this.syncUpdateForm();
+      return;
+    }
+
+    this.updateQuantity = 0;
+    this.customUnit = this.defaultUnitForSelectedCategory();
   }
 
   saveInventoryUpdate() {
@@ -75,9 +101,13 @@ export class ProductInfoPage implements OnInit {
     }
 
     this.updateError = '';
-    const item = this.data.inventoryCategories[this.selectedCategoryIndex]?.items[this.selectedItemIndex];
-    const category = this.data.inventoryCategories[this.selectedCategoryIndex];
-    if (!item) {
+    const category = this.selectedCategory;
+    const existingItem = this.selectedItem;
+    const productName = this.selectedProductName();
+    const unit = this.selectedProductUnit();
+
+    if (!category || !productName) {
+      this.updateError = 'Choose a product or type a new product name.';
       return;
     }
 
@@ -85,11 +115,22 @@ export class ProductInfoPage implements OnInit {
     this.isSavingUpdate = true;
     this.dataService.createInventoryUpdate({
       category: category.title,
-      productGroup: item.name,
+      productGroup: productName,
       quantity,
+      unit,
       note: this.updateNote
     }).subscribe({
       next: () => {
+        const item = this.productEntryMode === 'custom'
+          ? this.insertCustomItem(category, productName, quantity, unit)
+          : existingItem;
+
+        if (!item) {
+          this.isSavingUpdate = false;
+          this.showUpdateInventory = false;
+          return;
+        }
+
         item.quantity = quantity;
         item.status = this.statusFromQuantity(quantity);
         const entry: RecentEntry = {
@@ -97,7 +138,7 @@ export class ProductInfoPage implements OnInit {
           label: 'Manual inventory update',
           date: 'Just now',
           quantity: `${item.quantity} ${item.unit}`,
-          source: this.updateNote || 'Owner update',
+          source: `${category.title}${this.updateNote ? ` - ${this.updateNote}` : ''}`,
           icon: 'edit'
         };
         this.data!.recentEntries = [
@@ -106,12 +147,26 @@ export class ProductInfoPage implements OnInit {
         ].slice(0, 4);
         this.isSavingUpdate = false;
         this.showUpdateInventory = false;
+        this.customProductName = '';
+        this.updateNote = '';
       },
       error: () => {
         this.isSavingUpdate = false;
         this.updateError = 'Unable to save the inventory update. Please try again.';
       }
     });
+  }
+
+  get selectedCategory(): InventoryCategory | null {
+    return this.data?.inventoryCategories[this.selectedCategoryIndex] ?? null;
+  }
+
+  get selectedItem(): InventoryItem | null {
+    return this.selectedCategory?.items[this.selectedItemIndex] ?? null;
+  }
+
+  get canSaveUpdate(): boolean {
+    return !this.isSavingUpdate && Boolean(this.selectedCategory && this.selectedProductName());
   }
 
   getCategoryRoute(title: string): string {
@@ -149,13 +204,51 @@ export class ProductInfoPage implements OnInit {
   }
 
   private syncUpdateForm() {
-    const item = this.data?.inventoryCategories[this.selectedCategoryIndex]?.items[this.selectedItemIndex];
+    const item = this.selectedItem;
     if (!item) {
       this.updateQuantity = 0;
       return;
     }
 
     this.updateQuantity = item.quantity;
+  }
+
+  private selectedProductName(): string {
+    if (this.productEntryMode === 'custom') {
+      return this.customProductName.trim();
+    }
+
+    return this.selectedItem?.name ?? '';
+  }
+
+  private selectedProductUnit(): string {
+    if (this.productEntryMode === 'custom') {
+      return this.customUnit.trim() || this.defaultUnitForSelectedCategory();
+    }
+
+    return this.selectedItem?.unit || this.defaultUnitForSelectedCategory();
+  }
+
+  private defaultUnitForSelectedCategory(): string {
+    return this.selectedCategory?.items[0]?.unit || 'Unit';
+  }
+
+  private insertCustomItem(category: InventoryCategory, name: string, quantity: number, unit: string): InventoryItem {
+    const existingItem = category.items.find((item) => item.name.trim().toLowerCase() === name.trim().toLowerCase());
+
+    if (existingItem) {
+      return existingItem;
+    }
+
+    const item: InventoryItem = {
+      name,
+      quantity,
+      unit,
+      status: this.statusFromQuantity(quantity),
+    };
+
+    category.items = [item, ...category.items];
+    return item;
   }
 
   private statusFromQuantity(quantity: number): string {

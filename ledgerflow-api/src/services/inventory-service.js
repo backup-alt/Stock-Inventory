@@ -68,13 +68,13 @@ export class InventoryService {
     if (slug === 'raw-salt') {
       const source = await this.stockSource();
       const raw = rawSaltStock(source);
-      const update = this.latestUpdate('raw-salt', raw.productGroup);
-
-      return this.tableFromRows(slug, [{
+      const rows = this.applyUpdates('raw-salt', [{
         productGroup: raw.productGroup,
-        quantity: update?.quantity ?? raw.qty,
+        quantity: raw.qty,
         unit: raw.unitName,
       }]);
+
+      return this.tableFromRows(slug, rows);
     }
 
     if (slug === 'crystalline') {
@@ -126,6 +126,7 @@ export class InventoryService {
       categorySlug,
       productGroup: cleanText(payload.productGroup),
       quantity,
+      unit: shortUnit(payload.unit || defaultUnit(categorySlug)),
       status: stockStatus(quantity),
       note: cleanText(payload.note || ''),
       createdAt: new Date().toISOString(),
@@ -158,7 +159,7 @@ export class InventoryService {
 
   async crystallineRows() {
     const source = await this.stockSource();
-    return (source.data.finishedGoods || []).flatMap((plant) => {
+    const rows = (source.data.finishedGoods || []).flatMap((plant) => {
       return (plant.groups || [])
         .filter((group) => cleanText(group.productGroup).toLowerCase().includes('crystal'))
         .flatMap((group) => {
@@ -170,6 +171,8 @@ export class InventoryService {
           }));
         });
     });
+
+    return this.applyUpdates('crystalline', rows);
   }
 
   tableFromRows(slug, rows) {
@@ -198,10 +201,20 @@ export class InventoryService {
       return rows;
     }
 
-    return rows.map((row) => {
+    const rowKeys = new Set(rows.map((row) => cleanText(row.productGroup).toLowerCase()));
+    const updatedRows = rows.map((row) => {
       const update = this.latestUpdate(categorySlug, row.productGroup);
-      return update ? { ...row, quantity: update.quantity } : row;
+      return update ? { ...row, quantity: update.quantity, unit: update.unit || row.unit } : row;
     });
+    const customRows = this.uniqueUpdates(categorySlug)
+      .filter((update) => !rowKeys.has(cleanText(update.productGroup).toLowerCase()))
+      .map((update) => ({
+        productGroup: update.productGroup,
+        quantity: update.quantity,
+        unit: update.unit,
+      }));
+
+    return [...customRows, ...updatedRows];
   }
 
   latestUpdate(categorySlug, productGroup) {
@@ -209,6 +222,24 @@ export class InventoryService {
     return this.updates.find((update) => {
       return update.categorySlug === categorySlug
         && cleanText(update.productGroup).toLowerCase() === normalizedProduct;
+    });
+  }
+
+  uniqueUpdates(categorySlug) {
+    const seen = new Set();
+
+    return this.updates.filter((update) => {
+      if (update.categorySlug !== categorySlug) {
+        return false;
+      }
+
+      const key = cleanText(update.productGroup).toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
     });
   }
 }
@@ -263,4 +294,21 @@ function categorySlugFromLabel(label) {
   }
 
   return '';
+}
+
+function defaultUnit(categorySlug) {
+  switch (categorySlug) {
+    case 'raw-salt':
+      return 'MT';
+    case 'packaging-rolls':
+    case 'consumables':
+      return 'kg';
+    case 'bundles':
+      return 'Piece';
+    case 'packaging-bags':
+    case 'crystalline':
+      return 'Piece';
+    default:
+      return 'Unit';
+  }
 }

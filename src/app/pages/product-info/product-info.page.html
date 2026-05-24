@@ -180,15 +180,56 @@
               </select>
             </label>
 
-            <label class="block">
+            <div class="space-y-2">
               <span class="font-label-bold text-label-bold text-on-surface-variant uppercase">Product</span>
-              <select class="mt-1 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
-                      [(ngModel)]="selectedItemIndex"
-                      name="item"
-                      (ngModelChange)="onItemChange()">
-                <option *ngFor="let item of data.inventoryCategories[selectedCategoryIndex].items; let ii = index" [ngValue]="ii">{{item.name}}</option>
-              </select>
-            </label>
+              <div class="grid grid-cols-2 gap-2 rounded-lg bg-surface-container-high p-1 border border-outline-variant/40">
+                <button type="button"
+                        class="h-10 rounded-md font-label-bold text-label-bold transition-colors"
+                        [class.bg-surface-container-lowest]="productEntryMode === 'existing'"
+                        [class.text-primary]="productEntryMode === 'existing'"
+                        [class.shadow-soft]="productEntryMode === 'existing'"
+                        [class.text-on-surface-variant]="productEntryMode !== 'existing'"
+                        (click)="setProductEntryMode('existing')">
+                  Select
+                </button>
+                <button type="button"
+                        class="h-10 rounded-md font-label-bold text-label-bold transition-colors"
+                        [class.bg-surface-container-lowest]="productEntryMode === 'custom'"
+                        [class.text-primary]="productEntryMode === 'custom'"
+                        [class.shadow-soft]="productEntryMode === 'custom'"
+                        [class.text-on-surface-variant]="productEntryMode !== 'custom'"
+                        (click)="setProductEntryMode('custom')">
+                  Type New
+                </button>
+              </div>
+
+              <label *ngIf="productEntryMode === 'existing'" class="block">
+                <select class="w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
+                        [(ngModel)]="selectedItemIndex"
+                        name="item"
+                        (ngModelChange)="onItemChange()">
+                  <option *ngFor="let item of selectedCategory?.items; let ii = index" [ngValue]="ii">{{item.name}}</option>
+                </select>
+              </label>
+
+              <div *ngIf="productEntryMode === 'custom'" class="grid gap-3">
+                <label class="block">
+                  <input class="w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
+                         type="text"
+                         placeholder="Type product name"
+                         [(ngModel)]="customProductName"
+                         name="customProductName">
+                </label>
+                <label class="block">
+                  <span class="font-label-bold text-label-bold text-on-surface-variant uppercase">Unit</span>
+                  <input class="mt-1 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
+                         type="text"
+                         placeholder="kg, Piece, MT"
+                         [(ngModel)]="customUnit"
+                         name="customUnit">
+                </label>
+              </div>
+            </div>
 
             <div class="grid gap-3">
               <label class="block">
@@ -222,7 +263,7 @@
                       (click)="closeUpdateInventory()">Cancel</button>
               <button type="submit"
                       class="flex-1 h-11 rounded-md bg-primary text-on-primary font-label-bold disabled:opacity-60"
-                      [disabled]="isSavingUpdate">
+                      [disabled]="!canSaveUpdate">
                 {{isSavingUpdate ? 'Saving...' : 'Save'}}
               </button>
             </div>
