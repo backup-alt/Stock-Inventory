@@ -72,16 +72,6 @@
             </div>
             <p class="font-body-md text-body-md text-on-surface-variant">{{card.unit}}</p>
           </div>
-          <div class="mt-3 flex items-center gap-1 font-label-bold text-label-bold px-2 py-1 rounded-sm w-fit border"
-               [class.text-status-green-text]="card.trend.direction === 'up'"
-               [class.bg-status-green-bg]="card.trend.direction === 'up'"
-               [class.border-status-green-text/20]="card.trend.direction === 'up'"
-               [class.text-status-red-text]="card.trend.direction === 'down'"
-               [class.bg-status-red-bg]="card.trend.direction === 'down'"
-               [class.border-status-red-text/20]="card.trend.direction === 'down'">
-            <span class="material-symbols-outlined text-[14px]">{{card.trend.direction === 'up' ? 'trending_up' : 'trending_down'}}</span>
-            <span>{{card.trend.text}}</span>
-          </div>
         </div>
       </div>
     </ng-container>

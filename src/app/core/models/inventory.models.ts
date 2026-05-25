@@ -103,7 +103,7 @@ export interface StockReportCard {
   value: string | number;
   unit: string;
   status: StatusColor;
-  trend: {
+  trend?: {
     direction: TrendDirection;
     text: string;
   };

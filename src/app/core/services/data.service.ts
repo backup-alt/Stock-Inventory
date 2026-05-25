@@ -211,7 +211,7 @@ function dashboardData(stock: any, summary: any, filter: DateFilterParams): Dash
 
   return {
     greeting: 'Good Morning, Owner',
-    subtitle: `Live warehouse status for the selected ${filter.period.replace('-', ' ')}.`,
+    subtitle: `Warehouse status for the selected ${filter.period.replace('-', ' ')}.`,
     kpis: [
       {
         label: 'Total Stock Weight',
@@ -288,15 +288,12 @@ function overallReportData(summary: any, filter: DateFilterParams): OverallRepor
         label: 'Bundles Packed',
         value: totalQuantity(production).toLocaleString('en-US'),
         icon: 'inventory_2',
-        trend: { direction: 'up', percentage: 'Live' },
-        target: { label: `Rows: ${production.length}`, percentage: 83 },
       },
       {
         label: 'Material Consumed',
         value: totalQuantity(inventoryUsed).toLocaleString('en-US'),
         unit: 'units',
         icon: 'receipt_long',
-        progress: { label: 'Live report', percentage: inventoryUsed.length ? 65 : 0 },
       },
       {
         label: 'New Stock Entered',
@@ -309,8 +306,6 @@ function overallReportData(summary: any, filter: DateFilterParams): OverallRepor
         label: 'Orders Placed',
         value: orderPlaced.length,
         icon: 'local_shipping',
-        badge: { text: `${orderPlaced.length} Live`, icon: 'schedule' },
-        footer: 'From summary report',
       },
     ],
     analytics: {
@@ -343,7 +338,7 @@ function productInfoData(stock: any, summary: any): ProductInfoData {
   return {
     hero: {
       title: 'Inventory',
-      lotNumber: `Live snapshot - ${countRows(stock?.data?.inventory)} stock categories`,
+      lotNumber: `${countRows(stock?.data?.inventory)} stock categories`,
       status: 'ACTIVE',
     },
     productionHighlights: {
@@ -640,10 +635,6 @@ function stockCard(title: string, value: unknown, unit: string): StockReportCard
     value: quantity.toLocaleString('en-US'),
     unit: shortUnit(unit),
     status: color,
-    trend: {
-      direction: color === 'red' ? 'down' : 'up',
-      text: color === 'red' ? 'Needs attention' : 'Live snapshot',
-    },
   };
 }
 
