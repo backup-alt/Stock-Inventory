@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { createServer as createHttpServer } from 'node:http';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import { createApp } from '../src/app.js';
+import { dateRangeForFilter } from '../src/domain/periods.js';
 
 let server;
 let baseUrl;
@@ -32,6 +34,93 @@ test('health endpoint returns the service status', async () => {
   assert.equal(response.status, 200);
   assert.equal(payload.success, true);
   assert.equal(payload.data.status, 'ok');
+});
+
+test('report date ranges use India local period boundaries', () => {
+  const weekly = dateRangeForFilter({ period: 'weekly', date: '2026-05-27' });
+  const monthly = dateRangeForFilter({ period: 'monthly', date: '2026-05-25' });
+
+  assert.equal(weekly.fromDate, '2026-05-24T18:30:00.000Z');
+  assert.equal(weekly.toDate, '2026-05-31T18:29:59.000Z');
+  assert.equal(monthly.fromDate, '2026-04-30T18:30:00.000Z');
+  assert.equal(monthly.toDate, '2026-05-31T18:29:59.000Z');
+});
+
+test('upstream report URLs receive selected fromDate and toDate params', async () => {
+  const upstreamRequests = [];
+  const upstreamServer = createHttpServer((request, response) => {
+    const url = new URL(request.url || '/', 'http://127.0.0.1');
+    upstreamRequests.push(url);
+    const payload = url.pathname.endsWith('/getStockReports') ? stockReportPayload() : summaryReportPayload();
+
+    response.setHeader('Content-Type', 'application/json');
+    response.end(JSON.stringify(payload));
+  });
+
+  await new Promise((resolve) => upstreamServer.listen(0, '127.0.0.1', resolve));
+  const upstreamAddress = upstreamServer.address();
+  const upstreamBaseUrl = `http://${upstreamAddress.address}:${upstreamAddress.port}`;
+  const app = createApp({
+    clientApiKey: apiKey,
+    updatesFile,
+    upstream: {
+      summaryReportsUrl: `${upstreamBaseUrl}/reports/getSummaryReports`,
+      stockReportsUrl: `${upstreamBaseUrl}/reports/getStockReports`,
+      apiKey: '',
+      apiKeyHeader: 'Authorization',
+      apiKeyPrefix: 'Bearer',
+      timeoutMs: 1000,
+    },
+  });
+
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  const appAddress = app.address();
+  const appBaseUrl = `http://${appAddress.address}:${appAddress.port}`;
+
+  try {
+    await fetch(`${appBaseUrl}/api/dashboard?period=monthly&date=2026-05-25`, {
+      headers: { 'x-ledgerflow-api-key': apiKey },
+    });
+    await fetch(`${appBaseUrl}/api/reports/stock?period=weekly&date=2026-05-25`, {
+      headers: { 'x-ledgerflow-api-key': apiKey },
+    });
+  } finally {
+    await new Promise((resolve) => app.close(resolve));
+    await new Promise((resolve) => upstreamServer.close(resolve));
+  }
+
+  const summaryRequest = upstreamRequests.find((url) => url.pathname.endsWith('/getSummaryReports'));
+  const stockRequests = upstreamRequests.filter((url) => url.pathname.endsWith('/getStockReports'));
+  const weeklyStockRequest = stockRequests.find((url) => url.searchParams.get('fromDate') === '2026-05-24T18:30:00.000Z');
+
+  assert.equal(summaryRequest.searchParams.get('fromDate'), '2026-04-30T18:30:00.000Z');
+  assert.equal(summaryRequest.searchParams.get('toDate'), '2026-05-31T18:29:59.000Z');
+  assert.ok(weeklyStockRequest);
+  assert.equal(weeklyStockRequest.searchParams.get('toDate'), '2026-05-31T18:29:59.000Z');
+});
+
+test('explicit date ranges preserve the selected report period', async () => {
+  const response = await fetchApi('/api/reports/overall?period=monthly&date=2026-05-25&fromDate=2026-04-30T18%3A30%3A00.000Z&toDate=2026-05-31T18%3A29%3A59.000Z');
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.filter.period, 'monthly');
+  assert.equal(payload.filter.fromDate, '2026-05-01');
+  assert.equal(payload.filter.toDate, '2026-05-31');
+});
+
+test('custom report date ranges create graph buckets for selected days', async () => {
+  const response = await fetchApi('/api/reports/overall?period=weekly&rangeType=custom&date=2026-05-22&fromDate=2026-05-11T18%3A30%3A00.000Z&toDate=2026-05-22T18%3A29%3A59.000Z');
+  const payload = await response.json();
+  const chart = payload.analytics.bundlesPacked;
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.filter.period, 'weekly');
+  assert.equal(payload.filter.rangeType, 'custom');
+  assert.equal(chart.labels.length, 11);
+  assert.equal(chart.data.length, 11);
+  assert.equal(chart.labels[0], 'May 12');
+  assert.equal(chart.labels[10], 'May 22');
 });
 
 test('packaging roll and bag inventory are separate categories', async () => {
@@ -136,29 +225,12 @@ test('inventory updates are persisted to json and loaded by a new server', async
   assert.equal(customItem.quantity, 24);
 });
 
-test('product info recent entries include owner inventory updates', async () => {
-  const productGroup = 'Recent Owner Consumable';
-  await fetchApi('/api/inventory/updates', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      category: 'Consumables',
-      productGroup,
-      quantity: 18,
-      unit: 'kg',
-      note: 'Visible recent card',
-    }),
-  });
+test('product info recent entries do not show placeholder stock rows', async () => {
   const response = await fetchApi('/api/products/info');
   const payload = await response.json();
-  const [entry] = payload.recentEntries;
 
   assert.equal(response.status, 200);
-  assert.equal(payload.recentEntries.length, 4);
-  assert.equal(entry.category, 'Consumables');
-  assert.equal(entry.productName, productGroup);
-  assert.equal(entry.quantity, '18 kg');
-  assert.equal(entry.note, 'Visible recent card');
+  assert.deepEqual(payload.recentEntries, []);
 });
 
 test('inventory detail filters use saved update timestamps', async () => {
@@ -241,4 +313,35 @@ function fetchApi(path, options = {}) {
     ...options,
     headers: { ...(options.headers || {}), 'x-ledgerflow-api-key': apiKey },
   });
+}
+
+function summaryReportPayload() {
+  return {
+    data: {
+      reports: {
+        orderPlaced: [],
+        stockEntry: [],
+        production: [],
+        inventoryUsed: [],
+      },
+    },
+  };
+}
+
+function stockReportPayload() {
+  return {
+    data: {
+      rawSaltStock: {
+        productGroup: 'Raw Salt',
+        qty: 1,
+        unitName: 'Metric Ton',
+      },
+      inventory: [
+        { productName: 'Bundle (unpacked)', products: [] },
+        { productName: 'Roll', products: [] },
+        { productName: 'Bag (unpacked)', products: [] },
+      ],
+      finishedGoods: [],
+    },
+  };
 }

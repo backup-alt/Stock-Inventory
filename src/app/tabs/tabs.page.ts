@@ -181,11 +181,6 @@ export class TabsPage implements OnDestroy {
     this.showPrintOptions = false;
   }
 
-  printDocument() {
-    this.showPrintOptions = false;
-    setTimeout(() => window.print(), 150);
-  }
-
   async savePdf() {
     const reportPayload = await this.createReportPayload();
     const { blob, fileName } = this.createCurrentPagePdf(reportPayload);

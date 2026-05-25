@@ -48,13 +48,13 @@
         <div class="relative flex flex-col gap-2 items-start">
           <!-- Date Filter Toggle -->
           <div class="flex bg-surface-container-high rounded-full p-1 border border-outline-variant/30">
-            <button *ngFor="let period of ['Daily','Weekly','Monthly']"
+            <button *ngFor="let period of periodOptions"
                     class="px-4 py-1 rounded-full font-label-bold text-label-bold transition-colors"
-                    [class.bg-primary]="activePeriod === period.toLowerCase()"
-                    [class.text-on-primary]="activePeriod === period.toLowerCase()"
-                    [class.shadow-sm]="activePeriod === period.toLowerCase()"
-                    [class.text-on-surface-variant]="activePeriod !== period.toLowerCase()"
-                    (click)="setPeriod(period.toLowerCase())">{{period}}</button>
+                    [class.bg-primary]="activePeriod === period.value"
+                    [class.text-on-primary]="activePeriod === period.value"
+                    [class.shadow-sm]="activePeriod === period.value"
+                    [class.text-on-surface-variant]="activePeriod !== period.value"
+                    (click)="setPeriod(period.value)">{{period.label}}</button>
           </div>
           <button type="button"
                   class="flex items-center gap-2 bg-surface-container-lowest px-3 py-1.5 rounded-full border border-outline-variant/50 shadow-soft hover:bg-surface-container-high transition-colors"

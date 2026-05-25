@@ -18,6 +18,9 @@ import {
 export interface DateFilterParams {
   period: DatePeriod;
   date: string;
+  fromDate?: string;
+  toDate?: string;
+  rangeType?: 'custom';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -29,16 +32,16 @@ export class DataService {
 
   constructor(private http: HttpClient) {}
 
-  getDashboard(): Observable<DashboardData> {
-    return this.getData<DashboardData>('/api/dashboard');
+  getDashboard(filter?: DateFilterParams): Observable<DashboardData> {
+    return this.getData<DashboardData>('/api/dashboard', filter);
   }
 
-  getOverallReport(): Observable<OverallReportData> {
-    return this.getData<OverallReportData>('/api/reports/overall');
+  getOverallReport(filter?: DateFilterParams): Observable<OverallReportData> {
+    return this.getData<OverallReportData>('/api/reports/overall', filter);
   }
 
-  getStockReport(): Observable<StockReportData> {
-    return this.getData<StockReportData>('/api/reports/stock');
+  getStockReport(filter?: DateFilterParams): Observable<StockReportData> {
+    return this.getData<StockReportData>('/api/reports/stock', filter);
   }
 
   getProductInfo(): Observable<ProductInfoData> {
@@ -78,15 +81,31 @@ export class DataService {
   }
 
   private getData<T>(apiPath: string, filter?: DateFilterParams): Observable<T> {
-    const params = filter ? `?${new URLSearchParams({
-      period: filter.period,
-      date: filter.date,
-    }).toString()}` : '';
+    const searchParams = new URLSearchParams();
+
+    if (filter) {
+      searchParams.set('period', filter.period);
+      searchParams.set('date', filter.date);
+
+      if (filter.fromDate) {
+        searchParams.set('fromDate', filter.fromDate);
+      }
+
+      if (filter.toDate) {
+        searchParams.set('toDate', filter.toDate);
+      }
+
+      if (filter.rangeType) {
+        searchParams.set('rangeType', filter.rangeType);
+      }
+    }
+
+    const params = searchParams.toString() ? `?${searchParams.toString()}` : '';
 
     return this.http.get<T>(`${this.apiBaseUrl}${apiPath}${params}`, { headers: this.apiHeaders }).pipe(
       retry({
-        count: 5,
-        delay: () => timer(2000),
+        count: 1,
+        delay: () => timer(500),
       })
     );
   }

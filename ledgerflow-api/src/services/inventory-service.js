@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { HttpError } from '../http/http-error.js';
-import { parseReportFilter } from '../domain/periods.js';
+import { dateRangeForFilter, parseReportFilter } from '../domain/periods.js';
 import { cleanText, numberOrZero, shortUnit, titleFromSlug } from '../domain/strings.js';
 import { rawSaltStock } from '../domain/stock-source.js';
 import { stockStatus } from '../domain/status.js';
@@ -28,7 +28,7 @@ export class InventoryService {
   async summary(query = undefined) {
     await this.ensureUpdatesLoaded();
     const filter = query ? parseReportFilter(query) : null;
-    const source = await this.stockSource();
+    const source = await this.stockSource(filter);
     const categories = source.data.inventory.map((category) => {
       const categorySlug = categorySlugFromProductName(category.productName);
       const products = this.applyUpdates(categorySlug, (category.products || []).map((product) => ({
@@ -81,7 +81,7 @@ export class InventoryService {
     }
 
     if (slug === 'raw-salt') {
-      const source = await this.stockSource();
+      const source = await this.stockSource(filter);
       const raw = rawSaltStock(source);
       const rows = this.applyUpdates('raw-salt', [{
         productGroup: raw.productGroup,
@@ -171,13 +171,13 @@ export class InventoryService {
     return [...updates];
   }
 
-  async stockSource() {
-    return this.store.source('getStockReports.json');
+  async stockSource(filter = undefined) {
+    return this.store.source('getStockReports.json', filter);
   }
 
   async productRows(productName, filter = null) {
     await this.ensureUpdatesLoaded();
-    const source = await this.stockSource();
+    const source = await this.stockSource(filter);
     const category = source.data.inventory.find((item) => cleanText(item.productName) === productName);
     const categorySlug = categorySlugFromProductName(productName);
     const rows = (category?.products || []).map((product) => ({
@@ -191,7 +191,7 @@ export class InventoryService {
 
   async crystallineRows(filter = null) {
     await this.ensureUpdatesLoaded();
-    const source = await this.stockSource();
+    const source = await this.stockSource(filter);
     const rows = (source.data.finishedGoods || []).flatMap((plant) => {
       return (plant.groups || [])
         .filter((group) => cleanText(group.productGroup).toLowerCase().includes('crystal'))
@@ -395,34 +395,6 @@ function updateMatchesFilter(update, filter) {
     return true;
   }
 
-  const { start, end } = rangeForFilter(filter);
+  const { start, end } = dateRangeForFilter(filter);
   return createdAt >= start && createdAt < end;
-}
-
-function rangeForFilter(filter) {
-  const selected = dateFromIso(filter.date);
-
-  if (filter.period === 'monthly') {
-    const start = new Date(selected.getFullYear(), selected.getMonth(), 1);
-    const end = new Date(selected.getFullYear(), selected.getMonth() + 1, 1);
-    return { start, end };
-  }
-
-  if (filter.period === 'weekly') {
-    const start = new Date(selected);
-    start.setDate(selected.getDate() - 6);
-    const end = new Date(selected);
-    end.setDate(selected.getDate() + 1);
-    return { start, end };
-  }
-
-  const start = new Date(selected);
-  const end = new Date(selected);
-  end.setDate(selected.getDate() + 1);
-  return { start, end };
-}
-
-function dateFromIso(value) {
-  const [year, month, day] = String(value).split('-').map(Number);
-  return new Date(year, (month || 1) - 1, day || 1);
 }

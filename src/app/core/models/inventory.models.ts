@@ -3,7 +3,7 @@ export type TrendDirection = 'up' | 'down' | 'flat';
 export type StockStatus = 'in-stock' | 'low-stock' | 'out-of-stock';
 export type StatusColor = 'green' | 'yellow' | 'red';
 export type EntryType = 'inbound' | 'outbound';
-export type DatePeriod = 'daily' | 'weekly' | 'monthly';
+export type DatePeriod = 'daily' | 'weekly' | 'monthly' | 'custom';
 
 // ===== Dashboard =====
 export interface Trend {

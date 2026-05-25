@@ -49,16 +49,16 @@
         </div>
         <div class="relative flex flex-col items-center md:items-start gap-2 w-full md:w-auto">
           <div class="flex items-center justify-center w-full max-w-[360px] md:w-fit bg-surface-container p-1 rounded-full border border-outline-variant/30">
-            <button *ngFor="let period of ['Daily','Weekly','Monthly']"
+            <button *ngFor="let period of periodOptions"
                     class="flex-1 md:flex-none px-4 md:px-6 py-1.5 rounded-full font-label-bold text-label-bold text-center transition-colors"
-                    [class.bg-surface-container-lowest]="activePeriod === period.toLowerCase()"
-                    [class.shadow-sm]="activePeriod === period.toLowerCase()"
-                    [class.border]="activePeriod === period.toLowerCase()"
-                    [class.border-outline-variant/20]="activePeriod === period.toLowerCase()"
-                    [class.text-on-surface]="activePeriod === period.toLowerCase()"
-                    [class.text-on-surface-variant]="activePeriod !== period.toLowerCase()"
-                    [class.hover\:bg-surface-container-high]="activePeriod !== period.toLowerCase()"
-                    (click)="setPeriod(period.toLowerCase())">{{period}}</button>
+                    [class.bg-surface-container-lowest]="activePeriod === period.value"
+                    [class.shadow-sm]="activePeriod === period.value"
+                    [class.border]="activePeriod === period.value"
+                    [class.border-outline-variant/20]="activePeriod === period.value"
+                    [class.text-on-surface]="activePeriod === period.value"
+                    [class.text-on-surface-variant]="activePeriod !== period.value"
+                    [class.hover\:bg-surface-container-high]="activePeriod !== period.value"
+                    (click)="setPeriod(period.value)">{{period.label}}</button>
             <div class="w-px h-6 bg-outline-variant/50 mx-2"></div>
             <button type="button"
                     class="p-2 rounded-full text-on-surface-variant hover:text-primary transition-colors"
@@ -170,25 +170,25 @@
       </div>
 
       <!-- Performance Analytics -->
-      <section class="bg-surface rounded-lg border border-outline-variant shadow-soft overflow-hidden mt-4">
-        <div class="p-4 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+      <section class="bg-surface rounded-lg border border-outline-variant shadow-soft overflow-hidden mt-3">
+        <div class="px-3 py-2 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
           <h3 class="font-label-bold text-label-bold uppercase tracking-wider text-on-surface-variant">Performance Analytics</h3>
-          <span class="material-symbols-outlined text-on-surface-variant">insights</span>
+          <span class="material-symbols-outlined text-[20px] text-on-surface-variant">insights</span>
         </div>
         <div class="grid grid-cols-1 divide-y divide-outline-variant">
-          <div *ngFor="let chart of analyticsCharts" class="p-4 flex flex-col gap-3">
-            <div class="text-[10px] font-label-bold text-on-surface-variant uppercase">{{chart.label}}</div>
-            <div class="h-20 flex items-end gap-1">
+          <div *ngFor="let chart of analyticsCharts" class="p-3 flex flex-col gap-2">
+            <div class="text-[10px] font-label-bold text-on-surface-variant uppercase leading-none">{{chart.label}}</div>
+            <div class="h-14 sm:h-16 flex items-end gap-0.5 overflow-hidden">
               <div *ngFor="let val of chart.data; let i = index"
                    class="flex-1 rounded-t-sm transition-all duration-300"
                    [class.bg-primary/20]="i < 2"
                    [class.bg-primary/40]="i >= 2 && i < 4"
                    [class.bg-primary]="i === 4"
                    [class.bg-primary/60]="i === 5"
-                   [style.height.%]="val"></div>
+                   [style.height.%]="barHeight(val, chart)"></div>
             </div>
-            <div class="flex justify-between items-center mt-1 px-1">
-              <span *ngFor="let lbl of chart.labels" class="font-label-bold text-[10px] text-on-surface-variant text-center flex-1">{{lbl}}</span>
+            <div class="flex justify-between items-center px-0.5 overflow-hidden">
+              <span *ngFor="let lbl of chart.labels" class="font-label-bold text-[8px] sm:text-[9px] leading-none text-on-surface-variant text-center flex-1 min-w-0 truncate">{{lbl}}</span>
             </div>
           </div>
         </div>

@@ -11,3 +11,7 @@ services:
         value: 20
       - key: LEDGERFLOW_UPDATES_FILE
         value: /tmp/inventory-updates.json
+      - key: SUMMARY_REPORTS_URL
+        value: https://ktm-salt.onrender.com/reports/getSummaryReports
+      - key: STOCK_REPORTS_URL
+        value: https://ktm-salt.onrender.com/reports/getStockReports
