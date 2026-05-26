@@ -132,16 +132,3 @@ header button {
     padding-top: max(1rem, env(safe-area-inset-top));
   }
 }
-
-@media print {
-  header,
-  .universal-side-nav,
-  .mobile-bottom-nav {
-    display: none !important;
-  }
-
-  .app-content {
-    position: static;
-    inset: auto;
-  }
-}

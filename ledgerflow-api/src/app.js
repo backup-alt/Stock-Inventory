@@ -31,10 +31,10 @@ export function createApp(options = {}) {
     },
   }));
 
-  router.get('/api/dashboard', ({ reportService }) => reportService.dashboard());
+  router.get('/api/dashboard', ({ reportService, query }) => reportService.dashboard(query));
   router.get('/api/reports/overall', ({ reportService, query }) => reportService.overall(query));
   router.get('/api/reports/stock', ({ reportService, query }) => reportService.stock(query));
-  router.get('/api/reports/production-log', ({ reportService }) => reportService.productionLog());
+  router.get('/api/reports/production-log', ({ reportService, query }) => reportService.productionLog(query));
   router.get('/api/reports/recent-entries', ({ reportService, query }) => reportService.recentEntries(query));
   router.get('/api/products/info', ({ reportService }) => reportService.productInfo());
   router.get('/api/inventory', ({ inventoryService, query }) => inventoryService.summary(query));

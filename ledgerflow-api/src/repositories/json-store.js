@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { currentReportFilter, dateRangeForFilter } from '../domain/periods.js';
 
 export class JsonStore {
   constructor(settings) {
@@ -8,28 +9,34 @@ export class JsonStore {
     this.cache = new Map();
   }
 
-  source(fileName) {
+  source(fileName, filter = undefined) {
     if (fileName === 'getSummaryReports.json') {
-      return this.report('summary', this.upstream.summaryReportsUrl, [fileName]);
+      return this.report('summary', this.upstream.summaryReportsUrl, [fileName], filter);
     }
 
     if (fileName === 'getStockReports.json') {
-      return this.report('stock', this.upstream.stockReportsUrl, [fileName]);
+      return this.report('stock', this.upstream.stockReportsUrl, [fileName], filter);
     }
 
     return this.read(['source', fileName]);
   }
 
-  async report(cacheKey, upstreamUrl, localParts) {
+  async report(cacheKey, upstreamUrl, localParts, filter = undefined) {
     if (upstreamUrl) {
-      return this.fetchReport(cacheKey, upstreamUrl);
+      return this.fetchReport(cacheKey, upstreamUrl, filter);
     }
 
     return this.read(localParts);
   }
 
-  async fetchReport(cacheKey, url) {
+  async fetchReport(cacheKey, url, filter = undefined) {
     const headers = {};
+    const resolvedUrl = this.urlWithDateRange(url, filter);
+    const cached = this.cache.get(resolvedUrl);
+
+    if (cached) {
+      return structuredClone(cached);
+    }
 
     if (this.upstream.apiKey) {
       headers[this.upstream.apiKeyHeader] = this.upstream.apiKeyPrefix
@@ -37,7 +44,7 @@ export class JsonStore {
         : this.upstream.apiKey;
     }
 
-    const response = await fetch(url, {
+    const response = await fetch(resolvedUrl, {
       headers,
       signal: AbortSignal.timeout(this.upstream.timeoutMs),
     });
@@ -46,7 +53,20 @@ export class JsonStore {
       throw new Error(`Report API ${cacheKey} returned ${response.status}`);
     }
 
-    return response.json();
+    const value = await response.json();
+    this.cache.set(resolvedUrl, value);
+    return structuredClone(value);
+  }
+
+  urlWithDateRange(url, filter = undefined) {
+    const reportFilter = filter || currentReportFilter();
+    const range = dateRangeForFilter(reportFilter);
+    const upstreamUrl = new URL(url);
+
+    upstreamUrl.searchParams.set('fromDate', range.fromDate);
+    upstreamUrl.searchParams.set('toDate', range.toDate);
+
+    return upstreamUrl.toString();
   }
 
   async read(parts) {

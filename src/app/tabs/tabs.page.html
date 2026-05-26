@@ -8,9 +8,10 @@
       </button>
       <h1 class="font-headline-md text-headline-md font-bold tracking-tight text-primary">{{appName}}</h1>
     </div>
-    <button class="p-1.5 rounded-md hover:bg-surface-container-high transition-colors active:scale-95 duration-150 text-on-surface-variant"
+    <button aria-label="Open PDF options"
+            class="p-1.5 rounded-md hover:bg-surface-container-high transition-colors active:scale-95 duration-150 text-on-surface-variant"
             (click)="openPrintOptions()">
-      <span class="material-symbols-outlined text-xl">print</span>
+      <span class="material-symbols-outlined text-xl">picture_as_pdf</span>
     </button>
   </header>
 
@@ -82,14 +83,14 @@
     </button>
   </nav>
 
-  <!-- Print / PDF Prompt -->
+  <!-- PDF Prompt -->
   <div *ngIf="showPrintOptions"
        class="fixed inset-0 z-[70] bg-black/30 flex items-end sm:items-center justify-center p-4"
        (click)="closePrintOptions()">
     <div class="bg-surface rounded-lg shadow-soft-modal border border-outline-variant w-full max-w-sm p-4"
          (click)="$event.stopPropagation()">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="font-headline-md text-headline-md text-on-surface">Print Options</h2>
+        <h2 class="font-headline-md text-headline-md text-on-surface">PDF Options</h2>
         <button class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant"
                 (click)="closePrintOptions()">
           <span class="material-symbols-outlined text-[20px]">close</span>
@@ -105,11 +106,6 @@
                 (click)="sharePdf()">
           <span class="material-symbols-outlined text-primary">ios_share</span>
           <span class="font-body-md text-body-md font-semibold">Share a PDF</span>
-        </button>
-        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors"
-                (click)="printDocument()">
-          <span class="material-symbols-outlined text-primary">picture_as_pdf</span>
-          <span class="font-body-md text-body-md font-semibold">Print / system Save as PDF</span>
         </button>
         <button *ngIf="showSavedPdfAction"
                 class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-primary/30 bg-primary-container/20 text-on-surface hover:bg-primary-container/30 transition-colors"

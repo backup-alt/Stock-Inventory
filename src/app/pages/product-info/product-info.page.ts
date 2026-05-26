@@ -32,7 +32,7 @@ export class ProductInfoPage implements OnInit {
   }
 
   loadData(refresher?: any) {
-    if (!refresher) {
+    if (!refresher && !this.data) {
       this.isLoading = true;
     }
     this.hasError = false;

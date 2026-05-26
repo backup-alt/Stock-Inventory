@@ -54,15 +54,15 @@
 
       <div class="relative flex flex-col items-center gap-2 w-full">
         <div class="flex items-center justify-center w-full max-w-[360px] bg-surface-container p-1 rounded-full border border-outline-variant/30">
-          <button *ngFor="let period of ['Daily','Weekly','Monthly']"
+          <button *ngFor="let period of periodOptions"
                   class="flex-1 px-4 py-1.5 rounded-full font-label-bold text-label-bold text-center transition-colors"
-                  [class.bg-surface-container-lowest]="activePeriod === period.toLowerCase()"
-                  [class.shadow-sm]="activePeriod === period.toLowerCase()"
-                  [class.border]="activePeriod === period.toLowerCase()"
-                  [class.border-outline-variant/20]="activePeriod === period.toLowerCase()"
-                  [class.text-on-surface]="activePeriod === period.toLowerCase()"
-                  [class.text-on-surface-variant]="activePeriod !== period.toLowerCase()"
-                  (click)="setPeriod(period.toLowerCase())">{{period}}</button>
+                  [class.bg-surface-container-lowest]="activePeriod === period.value"
+                  [class.shadow-sm]="activePeriod === period.value"
+                  [class.border]="activePeriod === period.value"
+                  [class.border-outline-variant/20]="activePeriod === period.value"
+                  [class.text-on-surface]="activePeriod === period.value"
+                  [class.text-on-surface-variant]="activePeriod !== period.value"
+                  (click)="setPeriod(period.value)">{{period.label}}</button>
           <div class="w-px h-6 bg-outline-variant/50 mx-2"></div>
           <button type="button"
                   class="p-2 rounded-full text-on-surface-variant hover:text-primary transition-colors"
@@ -107,7 +107,7 @@
         <div *ngIf="data.items.length === 0"
              class="rounded-xl border border-outline-variant/50 bg-surface-container-lowest p-6 text-center shadow-soft">
           <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2">inventory_2</span>
-          <p class="font-label-bold text-on-surface">No stock entries for this period</p>
+          <p class="font-label-bold text-on-surface">No recent stock entries</p>
           <p class="mt-1 text-[12px] font-semibold text-on-surface-variant">Try Daily, Weekly, or Monthly to review saved owner updates.</p>
         </div>
         <article *ngFor="let item of data.items"
@@ -124,7 +124,7 @@
             </div>
           </div>
           <div class="mt-3 rounded-md bg-surface-container-high px-3 py-2">
-            <p class="text-[12px] font-semibold text-on-surface-variant break-words">Note: {{item.note || 'API report'}}</p>
+            <p class="text-[12px] font-semibold text-on-surface-variant break-words">Note: {{item.note || 'No note provided'}}</p>
           </div>
         </article>
       </div>
