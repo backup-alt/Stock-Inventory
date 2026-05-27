@@ -1,4 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { IonContent } from '@ionic/angular';
+import { Subscription } from 'rxjs';
 import { DataService } from '../../core/services/data.service';
 import { InventoryCategory, InventoryItem, ProductInfoData, RecentEntry } from '../../core/models/inventory.models';
 
@@ -10,7 +13,9 @@ type ProductEntryMode = 'existing' | 'custom';
   styleUrls: ['./product-info.page.scss'],
   standalone: false,
 })
-export class ProductInfoPage implements OnInit {
+export class ProductInfoPage implements OnInit, OnDestroy {
+  @ViewChild('pageContent') content?: IonContent;
+
   data: ProductInfoData | null = null;
   isLoading = true;
   hasError = false;
@@ -24,11 +29,24 @@ export class ProductInfoPage implements OnInit {
   updateNote = '';
   isSavingUpdate = false;
   updateError = '';
+  private fragmentSubscription?: Subscription;
 
-  constructor(private dataService: DataService) {}
+  constructor(
+    private dataService: DataService,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit() {
+    this.fragmentSubscription = this.route.fragment.subscribe(() => this.scrollToInventoryDetailsIfNeeded());
     this.loadData();
+  }
+
+  ngOnDestroy() {
+    this.fragmentSubscription?.unsubscribe();
+  }
+
+  ionViewDidEnter() {
+    this.scrollToInventoryDetailsIfNeeded();
   }
 
   loadData(refresher?: any) {
@@ -40,6 +58,7 @@ export class ProductInfoPage implements OnInit {
       next: (data) => {
         this.data = data;
         this.isLoading = false;
+        this.scrollToInventoryDetailsIfNeeded();
         this.completeRefresh(refresher);
       },
       error: () => {
@@ -286,5 +305,32 @@ export class ProductInfoPage implements OnInit {
     }
 
     setTimeout(() => refresher.target?.complete(), 500);
+  }
+
+  private shouldOpenInventoryDetails(): boolean {
+    return this.route.snapshot.fragment === 'inventory-details';
+  }
+
+  private scrollToInventoryDetailsIfNeeded() {
+    if (!this.shouldOpenInventoryDetails() || !this.data || this.isLoading) {
+      return;
+    }
+
+    setTimeout(() => this.scrollToInventoryDetails(), 120);
+  }
+
+  private async scrollToInventoryDetails() {
+    const target = document.getElementById('inventory-details');
+
+    if (!target || !this.content) {
+      return;
+    }
+
+    const scrollElement = await this.content.getScrollElement();
+    const contentTop = scrollElement.getBoundingClientRect().top;
+    const targetTop = target.getBoundingClientRect().top;
+    const y = scrollElement.scrollTop + targetTop - contentTop - 8;
+
+    await this.content.scrollToPoint(0, Math.max(0, y), 300);
   }
 }

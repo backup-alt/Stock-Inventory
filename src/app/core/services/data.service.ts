@@ -132,8 +132,8 @@ export class DataService {
     return this.inventoryTable('crystalline', filter);
   }
 
-  getProductionLog(): Observable<InventoryTableData> {
-    const reportFilter = this.defaultFilter('daily');
+  getProductionLog(filter?: DateFilterParams): Observable<InventoryTableData> {
+    const reportFilter = filter ?? this.defaultFilter('monthly');
 
     return this.summarySource(reportFilter).pipe(
       map((summary) => tableReport(
@@ -375,6 +375,10 @@ function productCategories(stock: any): InventoryCategory[] {
     {
       title: 'Consumables',
       items: productRows(stock, 'Consumables').map((row) => productInfoItem(row.productGroup, row.quantity, row.unit)),
+    },
+    {
+      title: 'Product Inventory',
+      items: finishedGoodsRows(stock).map((row) => productInfoItem(row.productGroup, row.quantity, row.unit)),
     },
   ].filter((category) => category.items.length > 0);
 }
@@ -674,6 +678,37 @@ function crystallineRows(stock: any): InventoryRow[] {
         }));
       });
   });
+}
+
+function finishedGoodsRows(stock: any): InventoryRow[] {
+  const rows = (stock?.data?.finishedGoods || []).flatMap((plant: any) => {
+    return (plant.groups || []).flatMap((group: any) => {
+      return (group.products || []).map((product: any) => ({
+        productGroup: cleanText(product.productBrand),
+        quantity: numberOrZero(product.qty),
+        unit: product.unitName,
+      }));
+    });
+  });
+  const groupedRows = new Map<string, InventoryRow>();
+
+  rows.forEach((row: InventoryRow) => {
+    if (!row.productGroup) {
+      return;
+    }
+
+    const key = `${row.productGroup.toLowerCase()}|${cleanText(row.unit).toLowerCase()}`;
+    const current = groupedRows.get(key);
+
+    if (current) {
+      current.quantity += row.quantity;
+      return;
+    }
+
+    groupedRows.set(key, { ...row });
+  });
+
+  return Array.from(groupedRows.values());
 }
 
 function lowStockItems(stock: any): CriticalStockItem[] {

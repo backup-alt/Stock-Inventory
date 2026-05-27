@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { DataService } from '../../core/services/data.service';
+import { DateFilterService } from '../../core/services/date-filter.service';
+import { DateRangePageBase } from '../../core/services/date-range-page-base';
 import { InventoryTableData } from '../../core/models/inventory.models';
 
 @Component({
@@ -8,14 +10,21 @@ import { InventoryTableData } from '../../core/models/inventory.models';
   styleUrls: ['./production-log.page.scss'],
   standalone: false,
 })
-export class ProductionLogPage implements OnInit {
+export class ProductionLogPage extends DateRangePageBase implements OnInit {
   data: InventoryTableData | null = null;
   isLoading = true;
   hasError = false;
 
-  constructor(private dataService: DataService) {}
+  constructor(
+    private dataService: DataService,
+    dateFilter: DateFilterService
+  ) {
+    super(dateFilter);
+  }
 
   ngOnInit() {
+    this.dateFilter.setPeriod('monthly');
+    this.initializeDateFilter();
     this.loadData();
   }
 
@@ -24,7 +33,7 @@ export class ProductionLogPage implements OnInit {
       this.isLoading = true;
     }
     this.hasError = false;
-    this.dataService.getProductionLog().subscribe({
+    this.dataService.getProductionLog(this.dateQuery()).subscribe({
       next: (data) => {
         this.data = data;
         this.isLoading = false;
@@ -44,5 +53,9 @@ export class ProductionLogPage implements OnInit {
     }
 
     setTimeout(() => refresher.target?.complete(), 500);
+  }
+
+  protected onDateFilterChanged(): void {
+    this.loadData();
   }
 }
