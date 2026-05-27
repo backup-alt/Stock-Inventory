@@ -63,8 +63,8 @@ export class Tab2Page extends DateRangePageBase implements OnInit {
     return Math.max(6, Math.min(100, normalized));
   }
 
-  openProductDetails() {
-    this.router.navigate(['/tabs/product-info']);
+  openProductionDetails() {
+    this.router.navigate(['/tabs/production-log']);
   }
 
   private applyDemoPeriod() {
