@@ -1,5 +1,5 @@
 <!-- Product Info Page - Tab 4 -->
-<ion-content>
+<ion-content #pageContent>
   <ion-refresher slot="fixed" (ionRefresh)="loadData($event)">
     <ion-refresher-content
       pullingIcon="chevron-down-circle-outline"
@@ -123,6 +123,10 @@
           <h3 class="font-headline-md text-headline-md">Product Inventory Details</h3>
         </div>
         <div class="space-y-4">
+          <div *ngIf="!data.inventoryCategories.length"
+               class="rounded-lg border border-dashed border-outline-variant bg-surface-container-lowest p-4 text-center">
+            <p class="font-body-md text-body-md text-on-surface-variant">No product inventory rows available</p>
+          </div>
           <div *ngFor="let category of data.inventoryCategories; let ci = index"
                class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden">
             <div class="bg-surface-container-low px-4 py-2 border-b border-outline-variant">

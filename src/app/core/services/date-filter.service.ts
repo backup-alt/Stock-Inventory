@@ -102,12 +102,14 @@ export class DateFilterService {
     const selectedRange = range?.startIso && range?.endIso
       ? this.normalizeRange(range.startIso, range.endIso)
       : this.getDateRange(period, date);
+    const todayIso = this.getInputDateValue();
+    const rangeIncludesToday = selectedRange.startIso <= todayIso && selectedRange.endIso >= todayIso;
 
     return {
       period,
       date,
       fromDate: this.toApiFromDate(selectedRange.startIso),
-      toDate: this.toApiToDate(selectedRange.endIso),
+      toDate: rangeIncludesToday ? new Date().toISOString() : this.toApiToDate(selectedRange.endIso),
     };
   }
 

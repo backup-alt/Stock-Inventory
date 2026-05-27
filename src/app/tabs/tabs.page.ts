@@ -1,8 +1,16 @@
 import { Component, HostListener, NgZone, OnDestroy, ViewChild } from '@angular/core';
 import { IonTabs } from '@ionic/angular';
 import { NavigationEnd, Router } from '@angular/router';
-import { Subscription, filter } from 'rxjs';
+import { Subscription, filter, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { DataService } from '../core/services/data.service';
+
+interface NavItem {
+  icon: string;
+  label: string;
+  route: string;
+  fragment?: string;
+}
 
 @Component({
   selector: 'app-tabs',
@@ -29,14 +37,14 @@ export class TabsPage implements OnDestroy {
   private initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
   private visualViewportResizeHandler = () => this.handleViewportResize();
 
-  primaryNavItems = [
+  primaryNavItems: NavItem[] = [
     { icon: 'dashboard', label: 'Dashboard', route: 'dashboard' },
     { icon: 'assessment', label: 'Reports', route: 'overall-report' },
     { icon: 'inventory_2', label: 'Stock', route: 'stock-report' },
     { icon: 'info', label: 'Products', route: 'product-info' },
   ];
 
-  sideNavItems = [
+  sideNavItems: NavItem[] = [
     { icon: 'factory', label: 'Production Details', route: 'production-log' },
     { icon: 'inventory', label: 'Product Inventory Details', route: 'product-info', fragment: 'inventory-details' },
     { icon: 'dashboard', label: 'Dashboard', route: 'dashboard' },
@@ -44,7 +52,8 @@ export class TabsPage implements OnDestroy {
 
   constructor(
     private router: Router,
-    private zone: NgZone
+    private zone: NgZone,
+    private dataService: DataService
   ) {
     this.checkScreenSize();
     this.syncActiveTab(this.router.url);
@@ -313,7 +322,7 @@ export class TabsPage implements OnDestroy {
       }
 
       if (cleanUrl.startsWith('/tabs/product-info')) {
-        return this.buildProductInfoReport(await this.fetchJson('product-info.json'));
+        return this.buildProductInfoReport(await firstValueFrom(this.dataService.getProductInfo()));
       }
 
       if (cleanUrl.startsWith('/tabs/production-log')) {

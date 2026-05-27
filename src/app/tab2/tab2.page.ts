@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { DataService } from '../core/services/data.service';
 import { DateFilterService } from '../core/services/date-filter.service';
 import { DateRangePageBase } from '../core/services/date-range-page-base';
@@ -19,7 +20,8 @@ export class Tab2Page extends DateRangePageBase implements OnInit {
 
   constructor(
     private dataService: DataService,
-    dateFilter: DateFilterService
+    dateFilter: DateFilterService,
+    private router: Router
   ) {
     super(dateFilter);
   }
@@ -59,6 +61,10 @@ export class Tab2Page extends DateRangePageBase implements OnInit {
 
     const normalized = ((Number(value) || 0) / max) * 100;
     return Math.max(6, Math.min(100, normalized));
+  }
+
+  openProductionDetails() {
+    this.router.navigate(['/tabs/production-log']);
   }
 
   private applyDemoPeriod() {
