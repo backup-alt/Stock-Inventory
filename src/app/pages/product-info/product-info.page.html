@@ -137,7 +137,7 @@
                 <span class="font-body-md text-on-surface min-w-0 break-words">{{item.name}}</span>
                 <div class="flex shrink-0 items-center gap-3">
                   <span class="font-body-md font-semibold" [class.text-on-surface-variant]="item.status !== 'critical'" [class.text-error]="item.status === 'critical'">
-                    {{item.quantity}} {{item.unit}}
+                    {{item.quantity | number:'1.0-3'}} {{item.unit}}
                   </span>
                   <span *ngIf="item.status === 'ok'" class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1">check_circle</span>
                 </div>

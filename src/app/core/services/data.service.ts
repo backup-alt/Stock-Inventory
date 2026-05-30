@@ -221,7 +221,7 @@ function dashboardData(stock: any, summary: any, filter: DateFilterParams): Dash
         footer: `${numberOrZero(raw.qty).toLocaleString('en-US')} metric tons raw stock`,
       },
       {
-        label: 'Orders Today',
+        label: ordersKpiLabel(filter.period),
         value: countRows(reports.orderPlaced),
         icon: 'shopping_cart',
         footer: `${countRows(reports.stockEntry)} stock entries`,
@@ -272,6 +272,22 @@ function dashboardData(stock: any, summary: any, filter: DateFilterParams): Dash
       },
     ] as InventoryBreakdownItem[],
   };
+}
+
+function ordersKpiLabel(period: DatePeriod): string {
+  if (period === 'weekly') {
+    return 'Orders This Week';
+  }
+
+  if (period === 'monthly') {
+    return 'Orders This Month';
+  }
+
+  if (period === 'custom') {
+    return 'Orders In Range';
+  }
+
+  return 'Orders Today';
 }
 
 function overallReportData(summary: any, filter: DateFilterParams): OverallReportData {
