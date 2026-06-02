@@ -650,10 +650,6 @@ export class TabsPage implements OnDestroy {
       .join(' ');
   }
 
-  private reportTitle(title: string): string {
-    return title.replace(`${this.appName} - `, '');
-  }
-
   private wrapText(text: string, limit: number): string[] {
     const words = text.split(' ');
     const lines: string[] = [];
@@ -678,13 +674,12 @@ export class TabsPage implements OnDestroy {
     return lines;
   }
 
-  private buildPdf(payload: ReportPayload, now: Date): Blob {
+  private buildPdf(payload: ReportPayload, _now: Date): Blob {
     const pageWidth = 595;
     const pageHeight = 842;
     const marginX = 36;
     const bottomMargin = 42;
     const contentWidth = pageWidth - marginX * 2;
-    const title = this.cleanPdfMarker(payload.title || `${this.appName} Report`);
     const sections = (payload.sections || []).filter((section) => section.lines?.length);
     const template = payload.template || 'summary';
     const pages: string[][] = [];
@@ -723,15 +718,7 @@ export class TabsPage implements OnDestroy {
       commands = [];
       pages.push(commands);
       rect(0, 0, pageWidth, pageHeight, color.white);
-      rect(marginX, 790, 78, 4, color.blue);
-      text(this.reportTitle(title), marginX, 810, 22, true, color.ink);
-      text(payload.period || this.currentPeriodLabel(), marginX, 788, 10, false, color.muted);
-      rect(380, 772, 155, 58, color.paleGray, color.border);
-      text('GENERATED DATE/TIME', 392, 814, 7, true, color.muted);
-      text(payload.generatedAt || now.toLocaleString(), 392, 798, 9, true, color.ink);
-      text('Asia/Calcutta', 392, 783, 8, false, color.muted);
-      line(marginX, 758, pageWidth - marginX, 758, color.border);
-      cursorY = 732;
+      cursorY = 812;
     };
     const ensureSpace = (height: number) => {
       if (cursorY - height < bottomMargin) {
@@ -739,10 +726,10 @@ export class TabsPage implements OnDestroy {
       }
     };
     const drawSectionTitle = (heading: string) => {
-      ensureSpace(36);
-      rect(marginX, cursorY - 2, contentWidth, 24, template === 'inventory' ? color.paleBlue : color.paleGray, color.border);
-      text(heading.toUpperCase(), marginX + 10, cursorY + 6, 10, true, color.ink);
-      cursorY -= 34;
+      ensureSpace(28);
+      rect(marginX, cursorY - 2, contentWidth, 20, template === 'inventory' ? color.paleBlue : color.paleGray, color.border);
+      text(heading.toUpperCase(), marginX + 10, cursorY + 4, 9, true, color.ink);
+      cursorY -= 28;
     };
     const parseLine = (value: string) => {
       const columns = value.split('\t');
@@ -794,31 +781,31 @@ export class TabsPage implements OnDestroy {
       const col2 = 88;
       const productColumn = section.productColumn || (template === 'inventory' ? 'PRODUCT GROUP' : 'PRODUCT BRAND');
 
-      ensureSpace(24);
-      rect(marginX, cursorY - 2, contentWidth, 20, color.blue);
-      text(productColumn, marginX + 8, cursorY + 4, 7, true, color.white);
-      text('QUANTITY', marginX + col1 + 8, cursorY + 4, 7, true, color.white);
-      text('UNIT', marginX + col1 + col2 + 8, cursorY + 4, 7, true, color.white);
-      cursorY -= 22;
+      ensureSpace(20);
+      rect(marginX, cursorY - 2, contentWidth, 17, color.blue);
+      text(productColumn, marginX + 8, cursorY + 3, 6.5, true, color.white);
+      text('QUANTITY', marginX + col1 + 8, cursorY + 3, 6.5, true, color.white);
+      text('UNIT', marginX + col1 + col2 + 8, cursorY + 3, 6.5, true, color.white);
+      cursorY -= 19;
 
       section.lines.forEach((item, index) => {
         const parsed = parseLine(item);
         const labelLines = wrap(parsed.label, 52);
         const valueLines = wrap(parsed.value || '-', 13);
         const statusLines = wrap(parsed.status || '-', 18);
-        const rowHeight = Math.max(28, 12 + Math.max(labelLines.length, valueLines.length, statusLines.length) * 11);
+        const rowHeight = Math.max(23, 10 + Math.max(labelLines.length, valueLines.length, statusLines.length) * 10);
         ensureSpace(rowHeight + 2);
 
         if (index % 2 === 0) {
-          rect(marginX, cursorY - rowHeight + 12, contentWidth, rowHeight, color.paleGray);
+          rect(marginX, cursorY - rowHeight + 10, contentWidth, rowHeight, color.paleGray);
         }
-        labelLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + 8, cursorY - 2 - lineIndex * 11, 8.5, lineIndex === 0, color.ink));
-        valueLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + col1 + 8, cursorY - 2 - lineIndex * 11, 8.5, lineIndex === 0, color.ink));
-        statusLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + col1 + col2 + 8, cursorY - 2 - lineIndex * 11, 8, false, color.muted));
-        line(marginX, cursorY - rowHeight + 10, pageWidth - marginX, cursorY - rowHeight + 10, color.border);
+        labelLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + 8, cursorY - 2 - lineIndex * 10, 8, lineIndex === 0, color.ink));
+        valueLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + col1 + 8, cursorY - 2 - lineIndex * 10, 8, lineIndex === 0, color.ink));
+        statusLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + col1 + col2 + 8, cursorY - 2 - lineIndex * 10, 7.5, false, color.muted));
+        line(marginX, cursorY - rowHeight + 8, pageWidth - marginX, cursorY - rowHeight + 8, color.border);
         cursorY -= rowHeight;
       });
-      cursorY -= 14;
+      cursorY -= 8;
     };
 
     startPage();
@@ -866,10 +853,6 @@ export class TabsPage implements OnDestroy {
     pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
 
     return new Blob([pdf], { type: 'application/pdf' });
-  }
-
-  private cleanPdfMarker(text: string): string {
-    return text.replace(/^#+\s*/, '').trim();
   }
 
   private escapePdfText(text: string): string {
