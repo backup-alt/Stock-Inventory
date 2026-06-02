@@ -350,8 +350,9 @@ export class TabsPage implements OnDestroy {
   }
 
   private async createCombinedReportPayload(): Promise<ReportPayload> {
-    const stockFilter = this.currentReportFilter('daily');
-    const summaryFilter = this.currentReportFilter('monthly');
+    const reportFilter = this.currentReportFilter();
+    const stockFilter = reportFilter;
+    const summaryFilter = reportFilter;
     const [stockReport, productInfo, productionLog, recentEntries] = await Promise.all([
       this.safeReportData(firstValueFrom(this.dataService.getStockReport(stockFilter)), { title: 'Stock Report', cards: [] }),
       this.safeReportData(firstValueFrom(this.dataService.getProductInfo()), {
@@ -439,24 +440,43 @@ export class TabsPage implements OnDestroy {
       return this.currentPeriodLabel();
     }
 
-    return `${this.formatReportDate(start)} to ${this.formatReportDate(end)}`;
+    const selectedDays = this.reportDayCount(start, end);
+    const dayLabel = `${selectedDays} day${selectedDays === 1 ? '' : 's'}`;
+
+    return `${this.formatReportDate(start)} to ${this.formatReportDate(end)} (${dayLabel})`;
   }
 
   private formatReportDate(date: Date): string {
-    const day = Number(new Intl.DateTimeFormat('en-GB', {
-      day: 'numeric',
-      timeZone: 'Asia/Kolkata',
-    }).format(date));
-    const month = new Intl.DateTimeFormat('en-GB', {
-      month: 'long',
-      timeZone: 'Asia/Kolkata',
-    }).format(date);
-    const year = new Intl.DateTimeFormat('en-GB', {
-      year: 'numeric',
-      timeZone: 'Asia/Kolkata',
-    }).format(date);
+    const { day, month, year } = this.indiaDateParts(date);
 
     return `${day}${this.ordinalSuffix(day)} ${month} ${year}`;
+  }
+
+  private reportDayCount(start: Date, end: Date): number {
+    const startParts = this.indiaDateParts(start);
+    const endParts = this.indiaDateParts(end);
+    const startUtc = Date.UTC(startParts.year, startParts.monthIndex, startParts.day);
+    const endUtc = Date.UTC(endParts.year, endParts.monthIndex, endParts.day);
+
+    return Math.max(1, Math.round((endUtc - startUtc) / 86400000) + 1);
+  }
+
+  private indiaDateParts(date: Date): { day: number; month: string; monthIndex: number; year: number } {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    }).formatToParts(date);
+    const partValue = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+    const month = partValue('month');
+
+    return {
+      day: Number(partValue('day')),
+      month,
+      monthIndex: new Date(`${month} 1, 2000`).getMonth(),
+      year: Number(partValue('year')),
+    };
   }
 
   private ordinalSuffix(day: number): string {
@@ -477,10 +497,7 @@ export class TabsPage implements OnDestroy {
   }
 
   private currentReportFilter(periodOverride?: DatePeriod): DateFilterParams {
-    const period = periodOverride ?? this.dateFilter.getCurrentPeriod();
-    const date = this.dateFilter.getInputDateValue();
-
-    return this.dateFilter.buildFilter(period, date);
+    return this.dateFilter.buildActiveFilter(periodOverride);
   }
 
   private currentPeriodLabel(): string {
@@ -759,12 +776,23 @@ export class TabsPage implements OnDestroy {
       commands.push(`0.6 w ${x1} ${y1} m ${x2} ${y2} l S`);
     };
     const wrap = (value: string, limit: number) => this.wrapText(value, limit);
+    const drawSummaryCard = () => {
+      const periodLines = wrap(payload.period || this.currentPeriodLabel(), 72).slice(0, 2);
+      const cardTopY = 826;
+      const cardHeight = periodLines.length > 1 ? 44 : 36;
+
+      rect(marginX, cardTopY - cardHeight, contentWidth, cardHeight, color.paleGray, color.border);
+      text('SUMMARY PERIOD', marginX + 10, cardTopY - 13, 6.8, true, color.muted);
+      periodLines.forEach((periodLine, lineIndex) => {
+        text(periodLine, marginX + 10, cardTopY - 27 - lineIndex * 11, 9, true, color.ink);
+      });
+      cursorY = cardTopY - cardHeight - 16;
+    };
     const startPage = () => {
       commands = [];
       pages.push(commands);
       rect(0, 0, pageWidth, pageHeight, color.white);
-      text(`Summary: ${payload.period || this.currentPeriodLabel()}`, marginX, 818, 9, true, color.muted);
-      cursorY = 792;
+      drawSummaryCard();
     };
     const ensureSpace = (height: number) => {
       if (cursorY - height < bottomMargin) {
