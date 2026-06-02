@@ -16,6 +16,7 @@ interface NavItem {
 interface ReportSection {
   heading: string;
   lines: string[];
+  productColumn?: 'PRODUCT GROUP' | 'PRODUCT BRAND';
 }
 
 interface ReportPayload {
@@ -308,8 +309,7 @@ export class TabsPage implements OnDestroy {
   private createCurrentPagePdf(reportPayload?: any): { blob: Blob; fileName: string } {
     const now = new Date();
     const dateStamp = now.toISOString().slice(0, 10);
-    const pageTitle = this.getCurrentPageTitle();
-    const fileName = `${this.appName}-${pageTitle.replace(/[^a-z0-9]+/gi, '-')}-${dateStamp}.pdf`;
+    const fileName = `${this.appName}-Combined-Report-${dateStamp}.pdf`;
     const payload = reportPayload ?? this.createDomReportPayload();
 
     return {
@@ -319,66 +319,7 @@ export class TabsPage implements OnDestroy {
   }
 
   private async createReportPayload() {
-    const cleanUrl = this.router.url.split('?')[0].split('#')[0];
-    const filter = this.currentReportFilter();
-
-    try {
-      if (cleanUrl.startsWith('/tabs/dashboard')) {
-        return this.buildDashboardReport(await firstValueFrom(this.dataService.getDashboard(filter)));
-      }
-
-      if (cleanUrl.startsWith('/tabs/overall-report')) {
-        return this.buildOverallReport(await firstValueFrom(this.dataService.getOverallReport(filter)));
-      }
-
-      if (cleanUrl.startsWith('/tabs/stock-report')) {
-        return this.buildStockReport(await firstValueFrom(this.dataService.getStockReport(filter)));
-      }
-
-      if (cleanUrl.startsWith('/tabs/product-info')) {
-        return this.buildProductInfoReport(await firstValueFrom(this.dataService.getProductInfo()));
-      }
-
-      if (cleanUrl.startsWith('/tabs/production-log')) {
-        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getProductionLog(filter)), 'Production Details');
-      }
-
-      if (cleanUrl.startsWith('/tabs/recent-entries')) {
-        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getRecentEntries(filter)), 'Recent Stock Entries');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/packaging-rolls')) {
-        return this.buildPackagingReport(await firstValueFrom(this.dataService.getPackagingInventory(filter)), 'rolls');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/packaging-bags')) {
-        return this.buildPackagingReport(await firstValueFrom(this.dataService.getPackagingInventory(filter)), 'bags');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/packaging')) {
-        return this.buildPackagingReport(await firstValueFrom(this.dataService.getPackagingInventory(filter)), 'all');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/raw-salt')) {
-        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getRawSaltInventory(filter)), 'Raw Salt Inventory');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/bundles')) {
-        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getBundleInventory(filter)), 'Bundle Inventory');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/consumables')) {
-        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getConsumablesInventory(filter)), 'Consumables Inventory');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/crystalline')) {
-        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getCrystallineInventory(filter)), 'Product Inventory');
-      }
-    } catch {
-      return this.createDomReportPayload();
-    }
-
-    return this.createDomReportPayload();
+    return this.createCombinedReportPayload();
   }
 
   private createDomReportPayload() {
@@ -406,6 +347,87 @@ export class TabsPage implements OnDestroy {
       template: this.reportTemplateForRoute(),
       sections,
     };
+  }
+
+  private async createCombinedReportPayload(): Promise<ReportPayload> {
+    const stockFilter = this.currentReportFilter('daily');
+    const summaryFilter = this.currentReportFilter('monthly');
+    const [stockReport, productInfo, productionLog, recentEntries] = await Promise.all([
+      this.safeReportData(firstValueFrom(this.dataService.getStockReport(stockFilter)), { title: 'Stock Report', cards: [] }),
+      this.safeReportData(firstValueFrom(this.dataService.getProductInfo()), {
+        hero: { title: 'Inventory', lotNumber: 'N/A', status: 'N/A' },
+        productionHighlights: { avgMonthlyYield: { value: 0, unit: 'Units' } },
+        inventoryCategories: [],
+        recentEntries: [],
+      }),
+      this.safeReportData(firstValueFrom(this.dataService.getProductionLog(summaryFilter)), { title: 'Production Details', breadcrumb: [], items: [] }),
+      this.safeReportData(firstValueFrom(this.dataService.getRecentEntries(summaryFilter)), { title: 'Recent Stock Entries', breadcrumb: [], items: [] }),
+    ]);
+    const rawStock = (stockReport.cards || []).find((card: any) => String(card.title || '').toLowerCase().includes('raw'));
+    const sections: ReportSection[] = [
+      {
+        heading: 'Raw Stock Live Ledger',
+        productColumn: 'PRODUCT GROUP' as const,
+        lines: rawStock ? [this.reportRow('Raw Salt', rawStock.value, rawStock.unit)] : [],
+      },
+      ...(productInfo.inventoryCategories || [])
+        .filter((category: any) => !String(category.title || '').toLowerCase().includes('raw stock'))
+        .map((category: any) => ({
+          heading: category.title,
+          productColumn: 'PRODUCT GROUP' as const,
+          lines: (category.items || []).map((item: any) => this.reportRow(item.name, item.quantity, item.unit)),
+        })),
+      {
+        heading: 'Production Output',
+        productColumn: 'PRODUCT BRAND' as const,
+        lines: (productionLog.items || []).map((item: any) => (
+          this.reportRow(item.productGroup, item.quantity, item.unit)
+        )),
+      },
+      {
+        heading: 'Stock Entries',
+        productColumn: 'PRODUCT GROUP' as const,
+        lines: (recentEntries.items || []).map((item: any) => (
+          this.reportRow(item.productGroup, item.quantity, item.unit)
+        )),
+      },
+    ].filter((section) => section.lines.length > 0);
+
+    return {
+      title: 'Stock Report',
+      generatedAt: new Date().toLocaleString(),
+      source: 'Combined inventory and summary report',
+      period: this.dateFilter.getFormattedDate('monthly', new Date()),
+      template: 'inventory',
+      sections,
+    };
+  }
+
+  private async safeReportData<T>(promise: Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await promise;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private reportRow(product: unknown, quantity: unknown, unit: unknown): string {
+    return `${this.cleanReportText(product)}\t${this.formatReportQuantity(quantity)}\t${this.cleanReportText(unit)}`;
+  }
+
+  private cleanReportText(value: unknown): string {
+    return String(value ?? '').replace(/\s+/g, ' ').trim() || 'N/A';
+  }
+
+  private formatReportQuantity(value: unknown): string {
+    const numeric = Number(String(value ?? '').replace(/,/g, ''));
+    if (!Number.isFinite(numeric)) {
+      return this.cleanReportText(value);
+    }
+
+    return numeric.toLocaleString('en-US', {
+      maximumFractionDigits: 3,
+    });
   }
 
   private currentReportFilter(periodOverride?: DatePeriod): DateFilterParams {
@@ -722,6 +744,15 @@ export class TabsPage implements OnDestroy {
       cursorY -= 34;
     };
     const parseLine = (value: string) => {
+      const columns = value.split('\t');
+      if (columns.length >= 3) {
+        return {
+          label: columns[0].trim(),
+          value: columns[1].trim(),
+          status: columns.slice(2).join(' ').trim(),
+        };
+      }
+
       const [label, rest = ''] = value.split(/:\s(.+)/);
       const [primary, status = ''] = rest.split(/\s-\s(.+)/);
       return {
@@ -758,22 +789,22 @@ export class TabsPage implements OnDestroy {
     };
     const drawTable = (section: ReportSection) => {
       drawSectionTitle(section.heading);
-      const col1 = template === 'inventory' ? 238 : 258;
-      const col2 = template === 'inventory' ? 132 : 118;
-      const col3 = contentWidth - col1 - col2;
+      const col1 = 318;
+      const col2 = 88;
+      const productColumn = section.productColumn || (template === 'inventory' ? 'PRODUCT GROUP' : 'PRODUCT BRAND');
 
       ensureSpace(24);
       rect(marginX, cursorY - 2, contentWidth, 20, color.blue);
-      text(template === 'inventory' ? 'PRODUCT GROUP' : 'DESCRIPTION', marginX + 8, cursorY + 4, 7, true, color.white);
-      text(template === 'inventory' ? 'QUANTITY / UNIT' : 'VALUE', marginX + col1 + 8, cursorY + 4, 7, true, color.white);
-      text('STATUS / NOTES', marginX + col1 + col2 + 8, cursorY + 4, 7, true, color.white);
+      text(productColumn, marginX + 8, cursorY + 4, 7, true, color.white);
+      text('QUANTITY', marginX + col1 + 8, cursorY + 4, 7, true, color.white);
+      text('UNIT', marginX + col1 + col2 + 8, cursorY + 4, 7, true, color.white);
       cursorY -= 22;
 
       section.lines.forEach((item, index) => {
         const parsed = parseLine(item);
-        const labelLines = wrap(parsed.label, 38);
-        const valueLines = wrap(parsed.value || '-', 21);
-        const statusLines = wrap(parsed.status || '-', 24);
+        const labelLines = wrap(parsed.label, 52);
+        const valueLines = wrap(parsed.value || '-', 13);
+        const statusLines = wrap(parsed.status || '-', 18);
         const rowHeight = Math.max(28, 12 + Math.max(labelLines.length, valueLines.length, statusLines.length) * 11);
         ensureSpace(rowHeight + 2);
 
@@ -790,14 +821,7 @@ export class TabsPage implements OnDestroy {
     };
 
     startPage();
-    sections.forEach((section, index) => {
-      const isCardSection = index === 0 && section.lines.length <= 8;
-      if (isCardSection) {
-        drawCards(section);
-        return;
-      }
-      drawTable(section);
-    });
+    sections.forEach((section) => drawTable(section));
 
     const pageStreams = pages.map((pageCommands, pageIndex) => {
       pageCommands.push('0.35 0.38 0.45 rg');
