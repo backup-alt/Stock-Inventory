@@ -398,7 +398,7 @@ export class TabsPage implements OnDestroy {
       title: 'Overall Report',
       generatedAt: new Date().toLocaleString(),
       source: 'Combined inventory and summary report',
-      period: this.dateFilter.getFormattedDate('monthly', new Date()),
+      period: this.formatReportPeriodRange(summaryFilter),
       template: 'inventory',
       sections,
     };
@@ -429,6 +429,51 @@ export class TabsPage implements OnDestroy {
     return numeric.toLocaleString('en-US', {
       maximumFractionDigits: 3,
     });
+  }
+
+  private formatReportPeriodRange(filter: DateFilterParams): string {
+    const start = filter.fromDate ? new Date(filter.fromDate) : null;
+    const end = filter.toDate ? new Date(filter.toDate) : null;
+
+    if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return this.currentPeriodLabel();
+    }
+
+    return `${this.formatReportDate(start)} to ${this.formatReportDate(end)}`;
+  }
+
+  private formatReportDate(date: Date): string {
+    const day = Number(new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    }).format(date));
+    const month = new Intl.DateTimeFormat('en-GB', {
+      month: 'long',
+      timeZone: 'Asia/Kolkata',
+    }).format(date);
+    const year = new Intl.DateTimeFormat('en-GB', {
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    }).format(date);
+
+    return `${day}${this.ordinalSuffix(day)} ${month} ${year}`;
+  }
+
+  private ordinalSuffix(day: number): string {
+    if (day % 100 >= 11 && day % 100 <= 13) {
+      return 'th';
+    }
+
+    switch (day % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
   }
 
   private currentReportFilter(periodOverride?: DatePeriod): DateFilterParams {
@@ -718,7 +763,8 @@ export class TabsPage implements OnDestroy {
       commands = [];
       pages.push(commands);
       rect(0, 0, pageWidth, pageHeight, color.white);
-      cursorY = 812;
+      text(`Summary: ${payload.period || this.currentPeriodLabel()}`, marginX, 818, 9, true, color.muted);
+      cursorY = 792;
     };
     const ensureSpace = (height: number) => {
       if (cursorY - height < bottomMargin) {
