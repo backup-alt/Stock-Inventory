@@ -364,37 +364,38 @@ export class TabsPage implements OnDestroy {
       this.safeReportData(firstValueFrom(this.dataService.getRecentEntries(summaryFilter)), { title: 'Recent Stock Entries', breadcrumb: [], items: [] }),
     ]);
     const rawStock = (stockReport.cards || []).find((card: any) => String(card.title || '').toLowerCase().includes('raw'));
+    const overallLines: string[] = [];
+
+    (productInfo.inventoryCategories || [])
+      .filter((category: any) => !String(category.title || '').toLowerCase().includes('raw stock'))
+      .forEach((category: any) => {
+        const categoryTitle = this.cleanReportText(category.title);
+
+        (category.items || []).forEach((item: any) => {
+          overallLines.push(this.reportRow(`${categoryTitle} - ${item.name}`, item.quantity, item.unit));
+        });
+      });
+    (productionLog.items || []).forEach((item: any) => {
+      overallLines.push(this.reportRow(`Production Output - ${item.productGroup}`, item.quantity, item.unit));
+    });
+    (recentEntries.items || []).forEach((item: any) => {
+      overallLines.push(this.reportRow(`Stock Entries - ${item.productGroup}`, item.quantity, item.unit));
+    });
     const sections: ReportSection[] = [
       {
-        heading: 'Raw Stock Live Ledger',
+        heading: 'Stock Report',
         productColumn: 'PRODUCT GROUP' as const,
         lines: rawStock ? [this.reportRow('Raw Salt', rawStock.value, rawStock.unit)] : [],
       },
-      ...(productInfo.inventoryCategories || [])
-        .filter((category: any) => !String(category.title || '').toLowerCase().includes('raw stock'))
-        .map((category: any) => ({
-          heading: category.title,
-          productColumn: 'PRODUCT GROUP' as const,
-          lines: (category.items || []).map((item: any) => this.reportRow(item.name, item.quantity, item.unit)),
-        })),
       {
-        heading: 'Production Output',
-        productColumn: 'PRODUCT BRAND' as const,
-        lines: (productionLog.items || []).map((item: any) => (
-          this.reportRow(item.productGroup, item.quantity, item.unit)
-        )),
-      },
-      {
-        heading: 'Stock Entries',
+        heading: 'Overall Report',
         productColumn: 'PRODUCT GROUP' as const,
-        lines: (recentEntries.items || []).map((item: any) => (
-          this.reportRow(item.productGroup, item.quantity, item.unit)
-        )),
+        lines: overallLines,
       },
     ].filter((section) => section.lines.length > 0);
 
     return {
-      title: 'Stock Report',
+      title: 'Overall Report',
       generatedAt: new Date().toLocaleString(),
       source: 'Combined inventory and summary report',
       period: this.dateFilter.getFormattedDate('monthly', new Date()),
