@@ -737,10 +737,11 @@ function lowStockItems(stock: any): CriticalStockItem[] {
   return allInventoryProducts(stock)
     .map((product) => {
       const quantity = numberOrZero(product.qty);
+      const displayQuantity = Math.max(0, quantity);
 
       return {
         name: cleanText(product.productGroup),
-        quantity,
+        quantity: displayQuantity,
         unit: shortUnit(product.unitName),
         type: stockStatus(quantity),
       };
