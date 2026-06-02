@@ -2,14 +2,29 @@ import { Component, HostListener, NgZone, OnDestroy, ViewChild } from '@angular/
 import { IonTabs } from '@ionic/angular';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter, firstValueFrom } from 'rxjs';
-import { environment } from '../../environments/environment';
-import { DataService } from '../core/services/data.service';
+import { DataService, DateFilterParams } from '../core/services/data.service';
+import { DateFilterService } from '../core/services/date-filter.service';
+import { DatePeriod } from '../core/models/inventory.models';
 
 interface NavItem {
   icon: string;
   label: string;
   route: string;
   fragment?: string;
+}
+
+interface ReportSection {
+  heading: string;
+  lines: string[];
+}
+
+interface ReportPayload {
+  title: string;
+  generatedAt: string;
+  source: string;
+  period?: string;
+  template?: 'summary' | 'inventory';
+  sections: ReportSection[];
 }
 
 @Component({
@@ -31,8 +46,6 @@ export class TabsPage implements OnDestroy {
   printStatusMessage = '';
   inputFocused = false;
   viewportKeyboardOpen = false;
-  private apiBaseUrl = environment.apiBaseUrl.replace(/\/$/, '');
-  private apiKey = environment.apiKey;
   private routerSubscription: Subscription;
   private initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
   private visualViewportResizeHandler = () => this.handleViewportResize();
@@ -53,7 +66,8 @@ export class TabsPage implements OnDestroy {
   constructor(
     private router: Router,
     private zone: NgZone,
-    private dataService: DataService
+    private dataService: DataService,
+    private dateFilter: DateFilterService
   ) {
     this.checkScreenSize();
     this.syncActiveTab(this.router.url);
@@ -297,28 +311,28 @@ export class TabsPage implements OnDestroy {
     const pageTitle = this.getCurrentPageTitle();
     const fileName = `${this.appName}-${pageTitle.replace(/[^a-z0-9]+/gi, '-')}-${dateStamp}.pdf`;
     const payload = reportPayload ?? this.createDomReportPayload();
-    const lines = this.reportPayloadToPdfLines(payload, now);
 
     return {
-      blob: this.buildPdf(lines),
+      blob: this.buildPdf(payload, now),
       fileName,
     };
   }
 
   private async createReportPayload() {
     const cleanUrl = this.router.url.split('?')[0].split('#')[0];
+    const filter = this.currentReportFilter();
 
     try {
       if (cleanUrl.startsWith('/tabs/dashboard')) {
-        return this.buildDashboardReport(await this.fetchJson('dashboard.json'));
+        return this.buildDashboardReport(await firstValueFrom(this.dataService.getDashboard(filter)));
       }
 
       if (cleanUrl.startsWith('/tabs/overall-report')) {
-        return this.buildOverallReport(await this.fetchJson('overall-report.json'));
+        return this.buildOverallReport(await firstValueFrom(this.dataService.getOverallReport(filter)));
       }
 
       if (cleanUrl.startsWith('/tabs/stock-report')) {
-        return this.buildStockReport(await this.fetchJson('stock-report.json'));
+        return this.buildStockReport(await firstValueFrom(this.dataService.getStockReport(filter)));
       }
 
       if (cleanUrl.startsWith('/tabs/product-info')) {
@@ -326,39 +340,39 @@ export class TabsPage implements OnDestroy {
       }
 
       if (cleanUrl.startsWith('/tabs/production-log')) {
-        return this.buildInventoryTableReport(await this.fetchJson('production-log.json'), 'Production Details');
+        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getProductionLog(filter)), 'Production Details');
       }
 
       if (cleanUrl.startsWith('/tabs/recent-entries')) {
-        return this.buildInventoryTableReport(await this.fetchJson('recent-entries.json'), 'Recent Stock Entries');
+        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getRecentEntries(filter)), 'Recent Stock Entries');
       }
 
       if (cleanUrl.startsWith('/tabs/inventory/packaging-rolls')) {
-        return this.buildPackagingReport(await this.fetchJson('inventory-packaging.json'), 'rolls');
+        return this.buildPackagingReport(await firstValueFrom(this.dataService.getPackagingInventory(filter)), 'rolls');
       }
 
       if (cleanUrl.startsWith('/tabs/inventory/packaging-bags')) {
-        return this.buildPackagingReport(await this.fetchJson('inventory-packaging.json'), 'bags');
+        return this.buildPackagingReport(await firstValueFrom(this.dataService.getPackagingInventory(filter)), 'bags');
       }
 
       if (cleanUrl.startsWith('/tabs/inventory/packaging')) {
-        return this.buildPackagingReport(await this.fetchJson('inventory-packaging.json'), 'all');
+        return this.buildPackagingReport(await firstValueFrom(this.dataService.getPackagingInventory(filter)), 'all');
       }
 
       if (cleanUrl.startsWith('/tabs/inventory/raw-salt')) {
-        return this.buildInventoryTableReport(await this.fetchJson('inventory-raw-salt.json'), 'Raw Salt Inventory');
+        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getRawSaltInventory(filter)), 'Raw Salt Inventory');
       }
 
       if (cleanUrl.startsWith('/tabs/inventory/bundles')) {
-        return this.buildInventoryTableReport(await this.fetchJson('inventory-bundles.json'), 'Bundle Inventory');
+        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getBundleInventory(filter)), 'Bundle Inventory');
       }
 
       if (cleanUrl.startsWith('/tabs/inventory/consumables')) {
-        return this.buildInventoryTableReport(await this.fetchJson('inventory-consumables.json'), 'Consumables Inventory');
+        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getConsumablesInventory(filter)), 'Consumables Inventory');
       }
 
       if (cleanUrl.startsWith('/tabs/inventory/crystalline')) {
-        return this.buildInventoryTableReport(await this.fetchJson('inventory-crystalline.json'), 'Product Inventory');
+        return this.buildInventoryTableReport(await firstValueFrom(this.dataService.getCrystallineInventory(filter)), 'Product Inventory');
       }
     } catch {
       return this.createDomReportPayload();
@@ -388,44 +402,38 @@ export class TabsPage implements OnDestroy {
       title: `${this.appName} - ${pageTitle}`,
       generatedAt: now.toLocaleString(),
       source: location.pathname,
+      period: this.currentPeriodLabel(),
+      template: this.reportTemplateForRoute(),
       sections,
     };
   }
 
-  private async fetchJson(fileName: string): Promise<any> {
-    const response = await fetch(`${this.apiBaseUrl}${this.getApiPath(fileName)}`, {
-      cache: 'no-store',
-      headers: this.apiKey ? { 'x-ledgerflow-api-key': this.apiKey } : {},
-    });
-    if (!response.ok) {
-      throw new Error(`Unable to load ${fileName}`);
-    }
-    return response.json();
+  private currentReportFilter(periodOverride?: DatePeriod): DateFilterParams {
+    const period = periodOverride ?? this.dateFilter.getCurrentPeriod();
+    const date = this.dateFilter.getInputDateValue();
+
+    return this.dateFilter.buildFilter(period, date);
   }
 
-  private getApiPath(fileName: string): string {
-    const paths: Record<string, string> = {
-      'dashboard.json': '/api/dashboard',
-      'overall-report.json': '/api/reports/overall',
-      'stock-report.json': '/api/reports/stock',
-      'product-info.json': '/api/products/info',
-      'production-log.json': '/api/reports/production-log',
-      'recent-entries.json': '/api/reports/recent-entries',
-      'inventory-packaging.json': '/api/inventory/packaging',
-      'inventory-raw-salt.json': '/api/inventory/raw-salt',
-      'inventory-bundles.json': '/api/inventory/bundles',
-      'inventory-consumables.json': '/api/inventory/consumables',
-      'inventory-crystalline.json': '/api/inventory/crystalline',
-    };
-
-    return paths[fileName] ?? '/api/dashboard';
+  private currentPeriodLabel(): string {
+    const period = this.dateFilter.getCurrentPeriod();
+    return this.dateFilter.getFormattedDate(period, new Date());
   }
 
-  private buildReport(title: string, sections: Array<{ heading: string; lines: string[] }>) {
+  private reportTemplateForRoute(): 'summary' | 'inventory' {
+    const cleanUrl = this.router.url.split('?')[0].split('#')[0];
+    return cleanUrl.startsWith('/tabs/stock-report') || cleanUrl.includes('/inventory') || cleanUrl.startsWith('/tabs/product-info')
+      ? 'inventory'
+      : 'summary';
+  }
+
+  private buildReport(title: string, sections: Array<{ heading: string; lines: string[] }>, template: 'summary' | 'inventory' = 'summary'): ReportPayload {
     return {
       title: `${this.appName} - ${title}`,
       generatedAt: new Date().toLocaleString(),
       source: location.pathname,
+      period: this.currentPeriodLabel(),
+      template,
       sections: sections.filter((section) => section.lines.length > 0),
     };
   }
@@ -455,7 +463,13 @@ export class TabsPage implements OnDestroy {
   }
 
   private buildOverallReport(data: any) {
-    const chart = data.analytics?.bundlesPacked;
+    const analytics = [
+      data.analytics?.bundlesPacked,
+      data.analytics?.materialConsumed,
+      data.analytics?.newStock,
+      data.analytics?.orders,
+    ].filter(Boolean);
+
     return this.buildReport('Overall Report', [
       {
         heading: 'Performance Summary',
@@ -464,10 +478,10 @@ export class TabsPage implements OnDestroy {
           return `${kpi.label}: ${kpi.value}${kpi.unit ? ` ${kpi.unit}` : ''}${details ? ` (${details})` : ''}`;
         }),
       },
-      {
-        heading: 'Bundles Packed Trend',
-        lines: chart ? chart.labels.map((label: string, index: number) => `${label}: ${chart.data[index]} bundles`) : [],
-      },
+      ...analytics.map((chart: any) => ({
+        heading: chart.label || 'Performance Trend',
+        lines: chart.labels.map((label: string, index: number) => `${label}: ${chart.data[index] ?? 0}`),
+      })),
     ]);
   }
 
@@ -479,7 +493,7 @@ export class TabsPage implements OnDestroy {
           `${card.title}: ${card.value} ${card.unit} - ${card.trend?.text ?? this.statusLabel(card.status)}`
         ),
       },
-    ]);
+    ], 'inventory');
   }
 
   private buildProductInfoReport(data: any) {
@@ -505,7 +519,7 @@ export class TabsPage implements OnDestroy {
           `${item.name}: ${item.quantity} ${item.unit} - ${this.statusLabel(item.status)}`
         ),
       })),
-    ]);
+    ], 'inventory');
   }
 
   private buildInventoryTableReport(data: any, fallbackTitle: string) {
@@ -516,7 +530,7 @@ export class TabsPage implements OnDestroy {
           `${item.productGroup}${item.subLabel ? ` (${item.subLabel})` : ''}: ${item.quantity} ${item.unit} - ${this.statusLabel(item.status)}`
         ),
       },
-    ]);
+    ], 'inventory');
   }
 
   private buildPackagingReport(data: any, mode: 'all' | 'rolls' | 'bags') {
@@ -535,7 +549,7 @@ export class TabsPage implements OnDestroy {
     return this.buildReport(title, [
       ...(mode !== 'bags' ? [{ heading: 'Packaging Rolls', lines: rollLines }] : []),
       ...(mode !== 'rolls' ? [{ heading: 'Packaging Bags', lines: bagLines }] : []),
-    ]);
+    ], 'inventory');
   }
 
   private statusLabel(status: string): string {
@@ -555,21 +569,6 @@ export class TabsPage implements OnDestroy {
       default:
         return status || 'N/A';
     }
-  }
-
-  private reportPayloadToPdfLines(payload: any, now: Date): string[] {
-    return [
-      `# ${payload.title || `${this.appName} Report`}`,
-      'GENERATED DATE/TIME',
-      payload.generatedAt || now.toLocaleString(),
-      'Asia/Calcutta',
-      '',
-      ...(payload.sections ?? []).flatMap((section: any) => [
-        `## ${section.heading}`,
-        ...(section.lines ?? []).map((line: string) => `- ${line}`),
-        '',
-      ]),
-    ];
   }
 
   private getActiveContentRoot(): HTMLElement | null {
@@ -628,6 +627,10 @@ export class TabsPage implements OnDestroy {
       .join(' ');
   }
 
+  private reportTitle(title: string): string {
+    return title.replace(`${this.appName} - `, '');
+  }
+
   private wrapText(text: string, limit: number): string[] {
     const words = text.split(' ');
     const lines: string[] = [];
@@ -652,76 +655,155 @@ export class TabsPage implements OnDestroy {
     return lines;
   }
 
-  private buildPdf(lines: string[]): Blob {
+  private buildPdf(payload: ReportPayload, now: Date): Blob {
     const pageWidth = 595;
     const pageHeight = 842;
     const marginX = 36;
     const bottomMargin = 42;
-    const title = this.cleanPdfMarker(lines[0] || `${this.appName} Report`);
-    const entries: Array<{ text: string; kind: string }> = [];
-    lines.slice(1).forEach((line: string) => {
-      entries.push(...this.pdfEntriesForLine(line));
-    });
-    const pages: Array<Array<{ text: string; kind: string }>> = [[]];
-    let y = 742;
+    const contentWidth = pageWidth - marginX * 2;
+    const title = this.cleanPdfMarker(payload.title || `${this.appName} Report`);
+    const sections = (payload.sections || []).filter((section) => section.lines?.length);
+    const template = payload.template || 'summary';
+    const pages: string[][] = [];
+    let commands: string[] = [];
+    let cursorY = 0;
 
-    entries.forEach((entry) => {
-      const height = this.pdfEntryHeight(entry.kind);
-      if (y - height < bottomMargin) {
-        pages.push([]);
-        y = 742;
+    const color = {
+      ink: '0.06 0.08 0.12',
+      muted: '0.35 0.39 0.46',
+      blue: '0.02 0.35 0.67',
+      paleBlue: '0.93 0.96 1',
+      paleGray: '0.96 0.97 0.99',
+      border: '0.82 0.85 0.9',
+      white: '1 1 1',
+    };
+    const addFill = (fill: string) => commands.push(`${fill} rg`);
+    const addStroke = (stroke: string) => commands.push(`${stroke} RG`);
+    const rect = (x: number, y: number, width: number, height: number, fill: string, stroke?: string) => {
+      addFill(fill);
+      commands.push(`${x} ${y} ${width} ${height} re f`);
+      if (stroke) {
+        addStroke(stroke);
+        commands.push(`${x} ${y} ${width} ${height} re S`);
       }
-      pages[pages.length - 1].push(entry);
-      y -= height;
-    });
+    };
+    const text = (value: string, x: number, y: number, size = 10, bold = false, fill = color.ink) => {
+      addFill(fill);
+      commands.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x} ${y} Td (${this.escapePdfText(value)}) Tj ET`);
+    };
+    const line = (x1: number, y1: number, x2: number, y2: number, stroke = color.border) => {
+      addStroke(stroke);
+      commands.push(`0.6 w ${x1} ${y1} m ${x2} ${y2} l S`);
+    };
+    const wrap = (value: string, limit: number) => this.wrapText(value, limit);
+    const startPage = () => {
+      commands = [];
+      pages.push(commands);
+      rect(0, 0, pageWidth, pageHeight, color.white);
+      rect(marginX, 790, 78, 4, color.blue);
+      text(this.reportTitle(title), marginX, 810, 22, true, color.ink);
+      text(payload.period || this.currentPeriodLabel(), marginX, 788, 10, false, color.muted);
+      rect(380, 772, 155, 58, color.paleGray, color.border);
+      text('GENERATED DATE/TIME', 392, 814, 7, true, color.muted);
+      text(payload.generatedAt || now.toLocaleString(), 392, 798, 9, true, color.ink);
+      text('Asia/Calcutta', 392, 783, 8, false, color.muted);
+      line(marginX, 758, pageWidth - marginX, 758, color.border);
+      cursorY = 732;
+    };
+    const ensureSpace = (height: number) => {
+      if (cursorY - height < bottomMargin) {
+        startPage();
+      }
+    };
+    const drawSectionTitle = (heading: string) => {
+      ensureSpace(36);
+      rect(marginX, cursorY - 2, contentWidth, 24, template === 'inventory' ? color.paleBlue : color.paleGray, color.border);
+      text(heading.toUpperCase(), marginX + 10, cursorY + 6, 10, true, color.ink);
+      cursorY -= 34;
+    };
+    const parseLine = (value: string) => {
+      const [label, rest = ''] = value.split(/:\s(.+)/);
+      const [primary, status = ''] = rest.split(/\s-\s(.+)/);
+      return {
+        label: (label || value).trim(),
+        value: (primary || '').trim(),
+        status: (status || '').trim(),
+      };
+    };
+    const drawCards = (section: ReportSection) => {
+      drawSectionTitle(section.heading);
+      const gap = 10;
+      const cardWidth = (contentWidth - gap) / 2;
+      const cardHeight = 58;
+      section.lines.forEach((item, index) => {
+        ensureSpace(cardHeight + 10);
+        const parsed = parseLine(item);
+        const column = index % 2;
+        const x = marginX + column * (cardWidth + gap);
 
-    const pageStreams = pages.map((pageEntries, pageIndex) => {
-      const commands: string[] = [
-        '0.93 0.96 1 rg 0 796 595 46 re f',
-        '0.02 0.35 0.67 rg',
-        `BT /F2 18 Tf ${marginX} 815 Td (${this.escapePdfText(title)}) Tj ET`,
-        '0.35 0.38 0.45 rg',
-        `BT /F1 8 Tf ${marginX} 26 Td (${this.escapePdfText(`LedgerFlow report - Page ${pageIndex + 1} of ${pages.length}`)}) Tj ET`,
-      ];
-      let cursorY = 760;
-
-      pageEntries.forEach((entry) => {
-        if (entry.kind === 'gap') {
-          cursorY -= 8;
-          return;
+        if (column === 0 && index > 0) {
+          cursorY -= cardHeight + 10;
         }
 
-        if (entry.kind === 'section') {
-          commands.push('0.96 0.97 0.99 rg');
-          commands.push(`${marginX} ${cursorY - 5} ${pageWidth - marginX * 2} 22 re f`);
-          commands.push('0.1 0.12 0.16 rg');
-          commands.push(`BT /F2 12 Tf ${marginX + 8} ${cursorY + 2} Td (${this.escapePdfText(entry.text.toUpperCase())}) Tj ET`);
-          cursorY -= 28;
-          return;
-        }
-
-        if (entry.kind === 'meta-label') {
-          commands.push('0.38 0.42 0.5 rg');
-          commands.push(`BT /F2 8 Tf ${marginX} ${cursorY} Td (${this.escapePdfText(entry.text.toUpperCase())}) Tj ET`);
-          cursorY -= 13;
-          return;
-        }
-
-        const font = entry.kind === 'row' ? '/F1 9 Tf' : '/F1 10 Tf';
-        const color = entry.kind === 'row' ? '0.14 0.16 0.2 rg' : '0.06 0.08 0.12 rg';
-        this.wrapText(entry.text, entry.kind === 'row' ? 94 : 86).forEach((wrappedLine) => {
-          commands.push(color);
-          commands.push(`BT ${font} ${marginX + (entry.kind === 'row' ? 10 : 0)} ${cursorY} Td (${this.escapePdfText(wrappedLine)}) Tj ET`);
-          cursorY -= entry.kind === 'row' ? 12 : 14;
+        rect(x, cursorY - cardHeight + 12, cardWidth, cardHeight, color.white, color.border);
+        text(parsed.label.toUpperCase(), x + 10, cursorY - 4, 7, true, color.muted);
+        wrap(parsed.value || '-', 28).slice(0, 2).forEach((wrapped, lineIndex) => {
+          text(wrapped, x + 10, cursorY - 22 - lineIndex * 12, lineIndex === 0 ? 15 : 9, lineIndex === 0, color.ink);
         });
-
-        if (entry.kind === 'row') {
-          commands.push('0.88 0.9 0.94 RG');
-          commands.push(`0.5 w ${marginX} ${cursorY + 6} m ${pageWidth - marginX} ${cursorY + 6} l S`);
+        if (parsed.status) {
+          text(parsed.status, x + 10, cursorY - 48, 7, false, color.muted);
         }
       });
+      cursorY -= cardHeight + 16;
+    };
+    const drawTable = (section: ReportSection) => {
+      drawSectionTitle(section.heading);
+      const col1 = template === 'inventory' ? 238 : 258;
+      const col2 = template === 'inventory' ? 132 : 118;
+      const col3 = contentWidth - col1 - col2;
 
-      return `${commands.join('\n')}\n`;
+      ensureSpace(24);
+      rect(marginX, cursorY - 2, contentWidth, 20, color.blue);
+      text(template === 'inventory' ? 'PRODUCT GROUP' : 'DESCRIPTION', marginX + 8, cursorY + 4, 7, true, color.white);
+      text(template === 'inventory' ? 'QUANTITY / UNIT' : 'VALUE', marginX + col1 + 8, cursorY + 4, 7, true, color.white);
+      text('STATUS / NOTES', marginX + col1 + col2 + 8, cursorY + 4, 7, true, color.white);
+      cursorY -= 22;
+
+      section.lines.forEach((item, index) => {
+        const parsed = parseLine(item);
+        const labelLines = wrap(parsed.label, 38);
+        const valueLines = wrap(parsed.value || '-', 21);
+        const statusLines = wrap(parsed.status || '-', 24);
+        const rowHeight = Math.max(28, 12 + Math.max(labelLines.length, valueLines.length, statusLines.length) * 11);
+        ensureSpace(rowHeight + 2);
+
+        if (index % 2 === 0) {
+          rect(marginX, cursorY - rowHeight + 12, contentWidth, rowHeight, color.paleGray);
+        }
+        labelLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + 8, cursorY - 2 - lineIndex * 11, 8.5, lineIndex === 0, color.ink));
+        valueLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + col1 + 8, cursorY - 2 - lineIndex * 11, 8.5, lineIndex === 0, color.ink));
+        statusLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + col1 + col2 + 8, cursorY - 2 - lineIndex * 11, 8, false, color.muted));
+        line(marginX, cursorY - rowHeight + 10, pageWidth - marginX, cursorY - rowHeight + 10, color.border);
+        cursorY -= rowHeight;
+      });
+      cursorY -= 14;
+    };
+
+    startPage();
+    sections.forEach((section, index) => {
+      const isCardSection = index === 0 && section.lines.length <= 8;
+      if (isCardSection) {
+        drawCards(section);
+        return;
+      }
+      drawTable(section);
+    });
+
+    const pageStreams = pages.map((pageCommands, pageIndex) => {
+      pageCommands.push('0.35 0.38 0.45 rg');
+      pageCommands.push(`BT /F1 8 Tf ${marginX} 26 Td (${this.escapePdfText(`${this.appName} report - Page ${pageIndex + 1} of ${pages.length}`)}) Tj ET`);
+      pageCommands.push(`BT /F1 8 Tf ${pageWidth - 156} 26 Td (${this.escapePdfText(payload.source || location.pathname)}) Tj ET`);
+      return `${pageCommands.join('\n')}\n`;
     });
 
     const objects: string[] = [];
@@ -759,43 +841,6 @@ export class TabsPage implements OnDestroy {
     pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
 
     return new Blob([pdf], { type: 'application/pdf' });
-  }
-
-  private pdfEntriesForLine(line: string): Array<{ text: string; kind: string }> {
-    const text = line.trim();
-
-    if (!text) {
-      return [{ text: '', kind: 'gap' }];
-    }
-
-    if (text.startsWith('## ')) {
-      return [{ text: text.slice(3), kind: 'section' }];
-    }
-
-    if (text === text.toUpperCase() && text.length <= 28) {
-      return [{ text, kind: 'meta-label' }];
-    }
-
-    if (text.startsWith('- ')) {
-      return [{ text: text.slice(2), kind: 'row' }];
-    }
-
-    return [{ text, kind: 'body' }];
-  }
-
-  private pdfEntryHeight(kind: string): number {
-    switch (kind) {
-      case 'section':
-        return 30;
-      case 'gap':
-        return 10;
-      case 'meta-label':
-        return 14;
-      case 'row':
-        return 18;
-      default:
-        return 16;
-    }
   }
 
   private cleanPdfMarker(text: string): string {
