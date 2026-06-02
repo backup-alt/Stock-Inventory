@@ -195,7 +195,18 @@ export class TabsPage implements OnDestroy {
     const { blob, fileName } = this.createCurrentPagePdf(reportPayload);
     const nativeBridge = (window as any).LedgerFlowPdfBridge;
 
-    if (nativeBridge?.saveReport) {
+    if (nativeBridge?.savePdf) {
+      try {
+        const result = nativeBridge.savePdf(await this.blobToDataUrl(blob), fileName);
+        if (String(result).startsWith('OK')) {
+          this.printStatusMessage = 'PDF saved to Downloads/LedgerFlow.';
+          this.showSavedPdfAction = true;
+          return;
+        }
+      } catch {
+        this.printStatusMessage = 'Native PDF save failed. Trying browser download instead.';
+      }
+    } else if (nativeBridge?.saveReport) {
       try {
         const result = nativeBridge.saveReport(JSON.stringify(reportPayload), fileName);
         if (String(result).startsWith('OK')) {
@@ -204,17 +215,6 @@ export class TabsPage implements OnDestroy {
           return;
         }
         this.printStatusMessage = 'Native PDF save failed. Trying browser download instead.';
-      } catch {
-        this.printStatusMessage = 'Native PDF save failed. Trying browser download instead.';
-      }
-    } else if (nativeBridge?.savePdf) {
-      try {
-        const result = nativeBridge.savePdf(await this.blobToDataUrl(blob), fileName);
-        if (String(result).startsWith('OK')) {
-          this.printStatusMessage = 'PDF saved to Downloads/LedgerFlow.';
-          this.showSavedPdfAction = true;
-          return;
-        }
       } catch {
         this.printStatusMessage = 'Native PDF save failed. Trying browser download instead.';
       }
@@ -229,7 +229,17 @@ export class TabsPage implements OnDestroy {
     const { blob, fileName } = this.createCurrentPagePdf(reportPayload);
     const nativeBridge = (window as any).LedgerFlowPdfBridge;
 
-    if (nativeBridge?.shareReport) {
+    if (nativeBridge?.sharePdf) {
+      try {
+        const result = nativeBridge.sharePdf(await this.blobToDataUrl(blob), fileName);
+        if (String(result).startsWith('OK')) {
+          this.showPrintOptions = false;
+          return;
+        }
+      } catch {
+        this.printStatusMessage = 'Native PDF share failed. Trying browser share instead.';
+      }
+    } else if (nativeBridge?.shareReport) {
       try {
         const result = nativeBridge.shareReport(JSON.stringify(reportPayload), fileName);
         if (String(result).startsWith('OK')) {
@@ -237,16 +247,6 @@ export class TabsPage implements OnDestroy {
           return;
         }
         this.printStatusMessage = 'Native PDF share failed. Trying browser share instead.';
-      } catch {
-        this.printStatusMessage = 'Native PDF share failed. Trying browser share instead.';
-      }
-    } else if (nativeBridge?.sharePdf) {
-      try {
-        const result = nativeBridge.sharePdf(await this.blobToDataUrl(blob), fileName);
-        if (String(result).startsWith('OK')) {
-          this.showPrintOptions = false;
-          return;
-        }
       } catch {
         this.printStatusMessage = 'Native PDF share failed. Trying browser share instead.';
       }
@@ -559,12 +559,13 @@ export class TabsPage implements OnDestroy {
 
   private reportPayloadToPdfLines(payload: any, now: Date): string[] {
     return [
-      payload.title || `${this.appName} Report`,
-      `Generated: ${payload.generatedAt || now.toLocaleString()}`,
-      `Source: ${payload.source || location.pathname}`,
+      `# ${payload.title || `${this.appName} Report`}`,
+      'GENERATED DATE/TIME',
+      payload.generatedAt || now.toLocaleString(),
+      'Asia/Calcutta',
       '',
       ...(payload.sections ?? []).flatMap((section: any) => [
-        section.heading,
+        `## ${section.heading}`,
         ...(section.lines ?? []).map((line: string) => `- ${line}`),
         '',
       ]),
@@ -652,22 +653,96 @@ export class TabsPage implements OnDestroy {
   }
 
   private buildPdf(lines: string[]): Blob {
-    const sanitizedLines = lines.map((line) => this.escapePdfText(line));
-    const textCommands = sanitizedLines
-      .map((line, index) => {
-        const size = index === 0 ? 18 : 10;
-        const y = 760 - index * 20;
-        return `BT /F1 ${size} Tf 54 ${y} Td (${line}) Tj ET`;
-      })
-      .join('\n');
-    const content = `${textCommands}\n`;
-    const objects = [
-      '<< /Type /Catalog /Pages 2 0 R >>',
-      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>`,
-      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-      `<< /Length ${content.length} >>\nstream\n${content}endstream`,
-    ];
+    const pageWidth = 595;
+    const pageHeight = 842;
+    const marginX = 36;
+    const bottomMargin = 42;
+    const title = this.cleanPdfMarker(lines[0] || `${this.appName} Report`);
+    const entries: Array<{ text: string; kind: string }> = [];
+    lines.slice(1).forEach((line: string) => {
+      entries.push(...this.pdfEntriesForLine(line));
+    });
+    const pages: Array<Array<{ text: string; kind: string }>> = [[]];
+    let y = 742;
+
+    entries.forEach((entry) => {
+      const height = this.pdfEntryHeight(entry.kind);
+      if (y - height < bottomMargin) {
+        pages.push([]);
+        y = 742;
+      }
+      pages[pages.length - 1].push(entry);
+      y -= height;
+    });
+
+    const pageStreams = pages.map((pageEntries, pageIndex) => {
+      const commands: string[] = [
+        '0.93 0.96 1 rg 0 796 595 46 re f',
+        '0.02 0.35 0.67 rg',
+        `BT /F2 18 Tf ${marginX} 815 Td (${this.escapePdfText(title)}) Tj ET`,
+        '0.35 0.38 0.45 rg',
+        `BT /F1 8 Tf ${marginX} 26 Td (${this.escapePdfText(`LedgerFlow report - Page ${pageIndex + 1} of ${pages.length}`)}) Tj ET`,
+      ];
+      let cursorY = 760;
+
+      pageEntries.forEach((entry) => {
+        if (entry.kind === 'gap') {
+          cursorY -= 8;
+          return;
+        }
+
+        if (entry.kind === 'section') {
+          commands.push('0.96 0.97 0.99 rg');
+          commands.push(`${marginX} ${cursorY - 5} ${pageWidth - marginX * 2} 22 re f`);
+          commands.push('0.1 0.12 0.16 rg');
+          commands.push(`BT /F2 12 Tf ${marginX + 8} ${cursorY + 2} Td (${this.escapePdfText(entry.text.toUpperCase())}) Tj ET`);
+          cursorY -= 28;
+          return;
+        }
+
+        if (entry.kind === 'meta-label') {
+          commands.push('0.38 0.42 0.5 rg');
+          commands.push(`BT /F2 8 Tf ${marginX} ${cursorY} Td (${this.escapePdfText(entry.text.toUpperCase())}) Tj ET`);
+          cursorY -= 13;
+          return;
+        }
+
+        const font = entry.kind === 'row' ? '/F1 9 Tf' : '/F1 10 Tf';
+        const color = entry.kind === 'row' ? '0.14 0.16 0.2 rg' : '0.06 0.08 0.12 rg';
+        this.wrapText(entry.text, entry.kind === 'row' ? 94 : 86).forEach((wrappedLine) => {
+          commands.push(color);
+          commands.push(`BT ${font} ${marginX + (entry.kind === 'row' ? 10 : 0)} ${cursorY} Td (${this.escapePdfText(wrappedLine)}) Tj ET`);
+          cursorY -= entry.kind === 'row' ? 12 : 14;
+        });
+
+        if (entry.kind === 'row') {
+          commands.push('0.88 0.9 0.94 RG');
+          commands.push(`0.5 w ${marginX} ${cursorY + 6} m ${pageWidth - marginX} ${cursorY + 6} l S`);
+        }
+      });
+
+      return `${commands.join('\n')}\n`;
+    });
+
+    const objects: string[] = [];
+    const addObject = (object: string) => {
+      objects.push(object);
+      return objects.length;
+    };
+    const catalogId = addObject('');
+    const pagesId = addObject('');
+    const fontRegularId = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    const fontBoldId = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+    const pageIds: number[] = [];
+
+    pageStreams.forEach((stream) => {
+      const contentId = addObject(`<< /Length ${stream.length} >>\nstream\n${stream}endstream`);
+      const pageId = addObject(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+      pageIds.push(pageId);
+    });
+
+    objects[catalogId - 1] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
+    objects[pagesId - 1] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>`;
 
     let pdf = '%PDF-1.4\n';
     const offsets = [0];
@@ -681,9 +756,50 @@ export class TabsPage implements OnDestroy {
     for (let index = 1; index <= objects.length; index++) {
       pdf += `${offsets[index].toString().padStart(10, '0')} 00000 n \n`;
     }
-    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
 
     return new Blob([pdf], { type: 'application/pdf' });
+  }
+
+  private pdfEntriesForLine(line: string): Array<{ text: string; kind: string }> {
+    const text = line.trim();
+
+    if (!text) {
+      return [{ text: '', kind: 'gap' }];
+    }
+
+    if (text.startsWith('## ')) {
+      return [{ text: text.slice(3), kind: 'section' }];
+    }
+
+    if (text === text.toUpperCase() && text.length <= 28) {
+      return [{ text, kind: 'meta-label' }];
+    }
+
+    if (text.startsWith('- ')) {
+      return [{ text: text.slice(2), kind: 'row' }];
+    }
+
+    return [{ text, kind: 'body' }];
+  }
+
+  private pdfEntryHeight(kind: string): number {
+    switch (kind) {
+      case 'section':
+        return 30;
+      case 'gap':
+        return 10;
+      case 'meta-label':
+        return 14;
+      case 'row':
+        return 18;
+      default:
+        return 16;
+    }
+  }
+
+  private cleanPdfMarker(text: string): string {
+    return text.replace(/^#+\s*/, '').trim();
   }
 
   private escapePdfText(text: string): string {
