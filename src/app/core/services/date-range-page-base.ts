@@ -23,6 +23,7 @@ export abstract class DateRangePageBase {
     this.activePeriod = period as DatePeriod;
     this.dateFilter.setPeriod(this.activePeriod);
     this.setRangeFromPeriod();
+    this.syncActiveSelection();
     this.refreshCalendar();
     this.updateCurrentDate();
     this.onDateFilterChanged();
@@ -62,6 +63,7 @@ export abstract class DateRangePageBase {
     this.pendingRangeStartIso = range.startIso;
     this.pendingRangeEndIso = range.endIso;
     this.showCalendar = false;
+    this.syncActiveSelection();
     this.refreshCalendar();
     this.updateCurrentDate();
     this.onDateFilterChanged();
@@ -77,10 +79,16 @@ export abstract class DateRangePageBase {
   }
 
   protected initializeDateFilter() {
-    this.activePeriod = this.dateFilter.getCurrentPeriod();
-    this.selectedDateIso = this.dateFilter.getInputDateValue();
+    const activeSelection = this.dateFilter.getActiveSelection();
+
+    this.activePeriod = activeSelection.period;
+    this.selectedDateIso = activeSelection.date;
     this.calendarMonth = this.dateFilter.parseInputDate(this.selectedDateIso);
-    this.setRangeFromPeriod();
+    this.selectedRangeStartIso = activeSelection.range.startIso;
+    this.selectedRangeEndIso = activeSelection.range.endIso;
+    this.pendingRangeStartIso = activeSelection.range.startIso;
+    this.pendingRangeEndIso = activeSelection.range.endIso;
+    this.syncActiveSelection();
     this.refreshCalendar();
     this.updateCurrentDate();
   }
@@ -89,6 +97,7 @@ export abstract class DateRangePageBase {
     const isCustomRange = this.activePeriod === 'custom';
     const queryPeriod: DatePeriod = isCustomRange ? 'weekly' : this.activePeriod;
     const filter = this.dateFilter.buildFilter(queryPeriod, this.selectedDateIso, this.currentRange());
+    this.syncActiveSelection();
 
     return isCustomRange
       ? { ...filter, rangeType: 'custom' as const }
@@ -117,6 +126,10 @@ export abstract class DateRangePageBase {
     this.selectedRangeEndIso = range.endIso;
     this.pendingRangeStartIso = range.startIso;
     this.pendingRangeEndIso = range.endIso;
+  }
+
+  private syncActiveSelection() {
+    this.dateFilter.setActiveSelection(this.activePeriod, this.selectedDateIso, this.currentRange());
   }
 
   private currentRange(): DateRangeSelection {

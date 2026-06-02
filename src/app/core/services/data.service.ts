@@ -53,6 +53,8 @@ interface SummaryReports {
   orderPlaced: any[];
 }
 
+type AnalyticsMode = 'sum' | 'count';
+
 @Injectable({ providedIn: 'root' })
 export class DataService {
   private readonly summaryReportsUrl = environment.summaryReportsUrl;
@@ -325,10 +327,10 @@ function overallReportData(summary: any, filter: DateFilterParams): OverallRepor
       },
     ],
     analytics: {
-      bundlesPacked: analyticsForPeriod(production, filter),
-      materialConsumed: analyticsForPeriod(inventoryUsed, filter),
-      newStock: analyticsForPeriod(stockEntry, filter),
-      orders: analyticsForPeriod(orderPlaced, filter),
+      bundlesPacked: analyticsForPeriod(production, filter, 'Bundles Packed'),
+      materialConsumed: analyticsForPeriod(inventoryUsed, filter, 'Material Consumed'),
+      newStock: analyticsForPeriod(stockEntry, filter, 'New Stock Entered'),
+      orders: analyticsForPeriod(orderPlaced, filter, 'Orders Placed', 'count'),
     },
   };
 }
@@ -448,13 +450,13 @@ function tableReport(title: string, description: string, rows: any[]): Inventory
     description,
     breadcrumb: description.split('>').map((item) => item.trim()),
     items: rows.map((row) => {
-      const quantity = numberOrZero(row.quantity);
+      const quantity = rowQuantity(row);
 
       return {
         productGroup: cleanText(row.productBrand || row.productGroup || row.productName),
         subLabel: cleanText(row.productBrand ? row.productGroup : row.productName),
         quantity,
-        unit: shortUnit(row.unit),
+        unit: shortUnit(row.unit || row.unitName),
         status: stockStatus(quantity),
       };
     }),
@@ -474,19 +476,23 @@ function inventoryItem(item: InventoryRow): InventoryTableItem {
 }
 
 function recentEntriesReport(title: string, description: string, rows: any[], filter: DateFilterParams): InventoryTableData {
+  const validDatedRows = rows.filter(hasRecentEntryDate);
+  const sourceRows = validDatedRows.length > 0
+    ? validDatedRows.filter((row) => dateMatchesFilter(recentEntryDateValue(row), filter))
+    : rows.filter(hasReportProduct);
+
   const items = rows
-    .filter(hasRecentEntryDate)
-    .filter((row) => dateMatchesFilter(recentEntryDateValue(row), filter))
+    .filter((row) => sourceRows.includes(row))
     .map((row) => {
-      const quantity = numberOrZero(row.quantity);
+      const quantity = rowQuantity(row);
 
       return {
-        productGroup: cleanText(row.productGroup || row.productName),
+        productGroup: cleanText(row.productGroup || row.productName || row.productBrand),
         category: cleanText(row.productName || 'Stock Entry'),
         note: cleanText(row.note || row.remarks || row.description || ''),
         subLabel: cleanText(row.productName),
         quantity,
-        unit: shortUnit(row.unit),
+        unit: shortUnit(row.unit || row.unitName),
         status: stockStatus(quantity),
         createdAt: recentEntryDateValue(row) || undefined,
       };
@@ -503,14 +509,14 @@ function recentEntriesReport(title: string, description: string, rows: any[], fi
 
 function recentStockEntries(rows: any[], limit = 4): RecentEntry[] {
   return rows
-    .filter(hasRecentEntryDate)
+    .filter(hasReportProduct)
     .map((row) => ({
       type: 'inbound' as const,
       label: cleanText(row.productGroup || row.productName),
       category: cleanText(row.productName || 'Stock Entry'),
       productName: cleanText(row.productGroup || row.productName),
       date: formatEntryDate(recentEntryDateValue(row)),
-      quantity: `${numberOrZero(row.quantity).toLocaleString('en-US')} ${shortUnit(row.unit)}`,
+      quantity: `${formatNumber(rowQuantity(row))} ${shortUnit(row.unit || row.unitName)}`,
       note: cleanText(row.note || row.remarks || row.description || ''),
       source: cleanText(row.plantName && row.plantName !== 'N/A' ? row.plantName : row.productName),
       icon: 'add_circle',
@@ -518,15 +524,15 @@ function recentStockEntries(rows: any[], limit = 4): RecentEntry[] {
     .slice(0, limit);
 }
 
-function analyticsForPeriod(rows: any[], filter: DateFilterParams) {
+function analyticsForPeriod(rows: any[], filter: DateFilterParams, title: string, mode: AnalyticsMode = 'sum') {
   const buckets = bucketsForFilter(filter);
   const label = filter.rangeType === 'custom'
-    ? 'Bundles Packed (selected range)'
-    : `Bundles Packed (${filter.period})`;
+    ? `${title} (selected range)`
+    : `${title} (${filter.period})`;
 
   return {
     label,
-    data: seriesForBuckets(rows, filter, buckets),
+    data: seriesForBuckets(rows, filter, buckets, mode),
     labels: buckets.map((bucket) => bucket.label),
   };
 }
@@ -570,7 +576,7 @@ function bucketsForFilter(filter: DateFilterParams): ChartBucket[] {
   return monthBuckets(range);
 }
 
-function seriesForBuckets(rows: any[], filter: DateFilterParams, bucketDefinitions: ChartBucket[]): number[] {
+function seriesForBuckets(rows: any[], filter: DateFilterParams, bucketDefinitions: ChartBucket[], mode: AnalyticsMode): number[] {
   const buckets = Array.from({ length: bucketDefinitions.length }, () => 0);
   const datedRows = (rows || []).filter((row) => rowDate(row));
 
@@ -579,13 +585,13 @@ function seriesForBuckets(rows: any[], filter: DateFilterParams, bucketDefinitio
       const bucketIndex = bucketIndexForFilter(rowDate(row), filter, bucketDefinitions);
 
       if (bucketIndex >= 0) {
-        buckets[bucketIndex] += numberOrZero(row.quantity);
+        buckets[bucketIndex] += reportRowValue(row, mode);
       }
     });
     return buckets.map((value) => Math.round(value));
   }
 
-  return bucketQuantities(rows, bucketDefinitions.length);
+  return bucketQuantities(rows, bucketDefinitions.length, mode);
 }
 
 function bucketIndexForFilter(value: string | null, filter: DateFilterParams, bucketDefinitions: ChartBucket[]): number {
@@ -731,10 +737,11 @@ function lowStockItems(stock: any): CriticalStockItem[] {
   return allInventoryProducts(stock)
     .map((product) => {
       const quantity = numberOrZero(product.qty);
+      const displayQuantity = Math.max(0, quantity);
 
       return {
         name: cleanText(product.productGroup),
-        quantity,
+        quantity: displayQuantity,
         unit: shortUnit(product.unitName),
         type: stockStatus(quantity),
       };
@@ -781,19 +788,47 @@ function reportsFrom(summary: any): SummaryReports {
   const reports = summary?.data?.reports || {};
 
   return {
-    stockEntry: Array.isArray(reports.stockEntry) ? reports.stockEntry : [],
-    production: Array.isArray(reports.production) ? reports.production : [],
-    inventoryUsed: Array.isArray(reports.inventoryUsed) ? reports.inventoryUsed : [],
-    orderPlaced: Array.isArray(reports.orderPlaced) ? reports.orderPlaced : [],
+    stockEntry: reportRows(reports, 'stockEntry', 'stockEntries', 'incomingStock', 'incomingData'),
+    production: reportRows(reports, 'production', 'productionOutput', 'productionReport'),
+    inventoryUsed: reportRows(reports, 'inventoryUsed', 'inventoryUsedConsumed', 'materialConsumed', 'consumedInventory'),
+    orderPlaced: reportRows(reports, 'orderPlaced', 'ordersPlaced', 'orders'),
   };
 }
 
 function totalQuantity(rows: any[]): number {
-  return (rows || []).reduce((sum, row) => sum + numberOrZero(row.quantity), 0);
+  return (rows || []).reduce((sum, row) => sum + rowQuantity(row), 0);
 }
 
 function countRows(rows: any): number {
   return Array.isArray(rows) ? rows.length : 0;
+}
+
+function reportRows(reports: any, ...keys: string[]): any[] {
+  for (const key of keys) {
+    if (Array.isArray(reports?.[key])) {
+      return reports[key];
+    }
+  }
+
+  return [];
+}
+
+function rowQuantity(row: any): number {
+  return numberOrZero(
+    row?.quantity ??
+    row?.qty ??
+    row?.totalQuantity ??
+    row?.stockQty ??
+    row?.stock
+  );
+}
+
+function reportRowValue(row: any, mode: AnalyticsMode): number {
+  return mode === 'count' ? 1 : rowQuantity(row);
+}
+
+function hasReportProduct(row: any): boolean {
+  return Boolean(cleanText(row?.productGroup || row?.productName || row?.productBrand));
 }
 
 function hasRecentEntryDate(row: any): boolean {
@@ -861,11 +896,11 @@ function parseInputDate(value: string): Date {
   return new Date(year, (month || 1) - 1, day || 1);
 }
 
-function bucketQuantities(rows: any[], bucketCount: number): number[] {
+function bucketQuantities(rows: any[], bucketCount: number, mode: AnalyticsMode): number[] {
   const buckets = Array.from({ length: bucketCount }, () => 0);
 
   rows.forEach((row, index) => {
-    buckets[index % bucketCount] += numberOrZero(row.quantity);
+    buckets[index % bucketCount] += reportRowValue(row, mode);
   });
 
   return buckets.map((value) => Math.round(value));
@@ -909,13 +944,13 @@ function indiaLocalToUtc(year: number, monthIndex: number, day: number): Date {
 
 function formatEntryDate(value: string | null): string {
   if (!value) {
-    return 'Just now';
+    return 'Current report';
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return 'Just now';
+    return 'Current report';
   }
 
   return date.toLocaleString('en-US', {
@@ -958,6 +993,10 @@ function shortUnit(value: unknown): string {
   const unit = cleanText(value);
   const normalized = unit.toLowerCase();
 
+  if (normalized === 'piece' || normalized === 'pieces') {
+    return "pc's";
+  }
+
   if (normalized === 'kilogram' || normalized === 'kilograms') {
     return 'kg';
   }
@@ -967,6 +1006,12 @@ function shortUnit(value: unknown): string {
   }
 
   return unit;
+}
+
+function formatNumber(value: unknown): string {
+  return numberOrZero(value).toLocaleString('en-US', {
+    maximumFractionDigits: 3,
+  });
 }
 
 function numberOrZero(value: unknown): number {

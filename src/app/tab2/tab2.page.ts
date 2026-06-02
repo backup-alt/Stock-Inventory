@@ -75,7 +75,12 @@ export class Tab2Page extends DateRangePageBase implements OnInit {
     const nextData = this.clone(this.baseData);
     this.updateCurrentDate();
     this.data = nextData;
-    this.analyticsCharts = [nextData.analytics.bundlesPacked];
+    this.analyticsCharts = [
+      nextData.analytics.bundlesPacked,
+      nextData.analytics.materialConsumed,
+      nextData.analytics.newStock,
+      nextData.analytics.orders,
+    ];
   }
 
   private clone<T>(value: T): T {

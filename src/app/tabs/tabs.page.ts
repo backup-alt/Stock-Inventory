@@ -2,14 +2,30 @@ import { Component, HostListener, NgZone, OnDestroy, ViewChild } from '@angular/
 import { IonTabs } from '@ionic/angular';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter, firstValueFrom } from 'rxjs';
-import { environment } from '../../environments/environment';
-import { DataService } from '../core/services/data.service';
+import { DataService, DateFilterParams } from '../core/services/data.service';
+import { DateFilterService } from '../core/services/date-filter.service';
+import { DatePeriod } from '../core/models/inventory.models';
 
 interface NavItem {
   icon: string;
   label: string;
   route: string;
   fragment?: string;
+}
+
+interface ReportSection {
+  heading: string;
+  lines: string[];
+  productColumn?: 'PRODUCT GROUP' | 'PRODUCT BRAND';
+}
+
+interface ReportPayload {
+  title: string;
+  generatedAt: string;
+  source: string;
+  period?: string;
+  template?: 'summary' | 'inventory';
+  sections: ReportSection[];
 }
 
 @Component({
@@ -31,8 +47,6 @@ export class TabsPage implements OnDestroy {
   printStatusMessage = '';
   inputFocused = false;
   viewportKeyboardOpen = false;
-  private apiBaseUrl = environment.apiBaseUrl.replace(/\/$/, '');
-  private apiKey = environment.apiKey;
   private routerSubscription: Subscription;
   private initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
   private visualViewportResizeHandler = () => this.handleViewportResize();
@@ -53,7 +67,8 @@ export class TabsPage implements OnDestroy {
   constructor(
     private router: Router,
     private zone: NgZone,
-    private dataService: DataService
+    private dataService: DataService,
+    private dateFilter: DateFilterService
   ) {
     this.checkScreenSize();
     this.syncActiveTab(this.router.url);
@@ -195,7 +210,18 @@ export class TabsPage implements OnDestroy {
     const { blob, fileName } = this.createCurrentPagePdf(reportPayload);
     const nativeBridge = (window as any).LedgerFlowPdfBridge;
 
-    if (nativeBridge?.saveReport) {
+    if (nativeBridge?.savePdf) {
+      try {
+        const result = nativeBridge.savePdf(await this.blobToDataUrl(blob), fileName);
+        if (String(result).startsWith('OK')) {
+          this.printStatusMessage = 'PDF saved to Downloads/LedgerFlow.';
+          this.showSavedPdfAction = true;
+          return;
+        }
+      } catch {
+        this.printStatusMessage = 'Native PDF save failed. Trying browser download instead.';
+      }
+    } else if (nativeBridge?.saveReport) {
       try {
         const result = nativeBridge.saveReport(JSON.stringify(reportPayload), fileName);
         if (String(result).startsWith('OK')) {
@@ -204,17 +230,6 @@ export class TabsPage implements OnDestroy {
           return;
         }
         this.printStatusMessage = 'Native PDF save failed. Trying browser download instead.';
-      } catch {
-        this.printStatusMessage = 'Native PDF save failed. Trying browser download instead.';
-      }
-    } else if (nativeBridge?.savePdf) {
-      try {
-        const result = nativeBridge.savePdf(await this.blobToDataUrl(blob), fileName);
-        if (String(result).startsWith('OK')) {
-          this.printStatusMessage = 'PDF saved to Downloads/LedgerFlow.';
-          this.showSavedPdfAction = true;
-          return;
-        }
       } catch {
         this.printStatusMessage = 'Native PDF save failed. Trying browser download instead.';
       }
@@ -229,7 +244,17 @@ export class TabsPage implements OnDestroy {
     const { blob, fileName } = this.createCurrentPagePdf(reportPayload);
     const nativeBridge = (window as any).LedgerFlowPdfBridge;
 
-    if (nativeBridge?.shareReport) {
+    if (nativeBridge?.sharePdf) {
+      try {
+        const result = nativeBridge.sharePdf(await this.blobToDataUrl(blob), fileName);
+        if (String(result).startsWith('OK')) {
+          this.showPrintOptions = false;
+          return;
+        }
+      } catch {
+        this.printStatusMessage = 'Native PDF share failed. Trying browser share instead.';
+      }
+    } else if (nativeBridge?.shareReport) {
       try {
         const result = nativeBridge.shareReport(JSON.stringify(reportPayload), fileName);
         if (String(result).startsWith('OK')) {
@@ -237,16 +262,6 @@ export class TabsPage implements OnDestroy {
           return;
         }
         this.printStatusMessage = 'Native PDF share failed. Trying browser share instead.';
-      } catch {
-        this.printStatusMessage = 'Native PDF share failed. Trying browser share instead.';
-      }
-    } else if (nativeBridge?.sharePdf) {
-      try {
-        const result = nativeBridge.sharePdf(await this.blobToDataUrl(blob), fileName);
-        if (String(result).startsWith('OK')) {
-          this.showPrintOptions = false;
-          return;
-        }
       } catch {
         this.printStatusMessage = 'Native PDF share failed. Trying browser share instead.';
       }
@@ -294,77 +309,17 @@ export class TabsPage implements OnDestroy {
   private createCurrentPagePdf(reportPayload?: any): { blob: Blob; fileName: string } {
     const now = new Date();
     const dateStamp = now.toISOString().slice(0, 10);
-    const pageTitle = this.getCurrentPageTitle();
-    const fileName = `${this.appName}-${pageTitle.replace(/[^a-z0-9]+/gi, '-')}-${dateStamp}.pdf`;
+    const fileName = `${this.appName}-Combined-Report-${dateStamp}.pdf`;
     const payload = reportPayload ?? this.createDomReportPayload();
-    const lines = this.reportPayloadToPdfLines(payload, now);
 
     return {
-      blob: this.buildPdf(lines),
+      blob: this.buildPdf(payload, now),
       fileName,
     };
   }
 
   private async createReportPayload() {
-    const cleanUrl = this.router.url.split('?')[0].split('#')[0];
-
-    try {
-      if (cleanUrl.startsWith('/tabs/dashboard')) {
-        return this.buildDashboardReport(await this.fetchJson('dashboard.json'));
-      }
-
-      if (cleanUrl.startsWith('/tabs/overall-report')) {
-        return this.buildOverallReport(await this.fetchJson('overall-report.json'));
-      }
-
-      if (cleanUrl.startsWith('/tabs/stock-report')) {
-        return this.buildStockReport(await this.fetchJson('stock-report.json'));
-      }
-
-      if (cleanUrl.startsWith('/tabs/product-info')) {
-        return this.buildProductInfoReport(await firstValueFrom(this.dataService.getProductInfo()));
-      }
-
-      if (cleanUrl.startsWith('/tabs/production-log')) {
-        return this.buildInventoryTableReport(await this.fetchJson('production-log.json'), 'Production Details');
-      }
-
-      if (cleanUrl.startsWith('/tabs/recent-entries')) {
-        return this.buildInventoryTableReport(await this.fetchJson('recent-entries.json'), 'Recent Stock Entries');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/packaging-rolls')) {
-        return this.buildPackagingReport(await this.fetchJson('inventory-packaging.json'), 'rolls');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/packaging-bags')) {
-        return this.buildPackagingReport(await this.fetchJson('inventory-packaging.json'), 'bags');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/packaging')) {
-        return this.buildPackagingReport(await this.fetchJson('inventory-packaging.json'), 'all');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/raw-salt')) {
-        return this.buildInventoryTableReport(await this.fetchJson('inventory-raw-salt.json'), 'Raw Salt Inventory');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/bundles')) {
-        return this.buildInventoryTableReport(await this.fetchJson('inventory-bundles.json'), 'Bundle Inventory');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/consumables')) {
-        return this.buildInventoryTableReport(await this.fetchJson('inventory-consumables.json'), 'Consumables Inventory');
-      }
-
-      if (cleanUrl.startsWith('/tabs/inventory/crystalline')) {
-        return this.buildInventoryTableReport(await this.fetchJson('inventory-crystalline.json'), 'Product Inventory');
-      }
-    } catch {
-      return this.createDomReportPayload();
-    }
-
-    return this.createDomReportPayload();
+    return this.createCombinedReportPayload();
   }
 
   private createDomReportPayload() {
@@ -388,44 +343,182 @@ export class TabsPage implements OnDestroy {
       title: `${this.appName} - ${pageTitle}`,
       generatedAt: now.toLocaleString(),
       source: location.pathname,
+      period: this.currentPeriodLabel(),
+      template: this.reportTemplateForRoute(),
       sections,
     };
   }
 
-  private async fetchJson(fileName: string): Promise<any> {
-    const response = await fetch(`${this.apiBaseUrl}${this.getApiPath(fileName)}`, {
-      cache: 'no-store',
-      headers: this.apiKey ? { 'x-ledgerflow-api-key': this.apiKey } : {},
+  private async createCombinedReportPayload(): Promise<ReportPayload> {
+    const reportFilter = this.currentReportFilter();
+    const stockFilter = reportFilter;
+    const summaryFilter = reportFilter;
+    const [stockReport, productInfo, productionLog, recentEntries] = await Promise.all([
+      this.safeReportData(firstValueFrom(this.dataService.getStockReport(stockFilter)), { title: 'Stock Report', cards: [] }),
+      this.safeReportData(firstValueFrom(this.dataService.getProductInfo()), {
+        hero: { title: 'Inventory', lotNumber: 'N/A', status: 'N/A' },
+        productionHighlights: { avgMonthlyYield: { value: 0, unit: 'Units' } },
+        inventoryCategories: [],
+        recentEntries: [],
+      }),
+      this.safeReportData(firstValueFrom(this.dataService.getProductionLog(summaryFilter)), { title: 'Production Details', breadcrumb: [], items: [] }),
+      this.safeReportData(firstValueFrom(this.dataService.getRecentEntries(summaryFilter)), { title: 'Recent Stock Entries', breadcrumb: [], items: [] }),
+    ]);
+    const rawStock = (stockReport.cards || []).find((card: any) => String(card.title || '').toLowerCase().includes('raw'));
+    const overallLines: string[] = [];
+
+    (productInfo.inventoryCategories || [])
+      .filter((category: any) => !String(category.title || '').toLowerCase().includes('raw stock'))
+      .forEach((category: any) => {
+        const categoryTitle = this.cleanReportText(category.title);
+
+        (category.items || []).forEach((item: any) => {
+          overallLines.push(this.reportRow(`${categoryTitle} - ${item.name}`, item.quantity, item.unit));
+        });
+      });
+    (productionLog.items || []).forEach((item: any) => {
+      overallLines.push(this.reportRow(`Production Output - ${item.productGroup}`, item.quantity, item.unit));
     });
-    if (!response.ok) {
-      throw new Error(`Unable to load ${fileName}`);
-    }
-    return response.json();
-  }
+    (recentEntries.items || []).forEach((item: any) => {
+      overallLines.push(this.reportRow(`Stock Entries - ${item.productGroup}`, item.quantity, item.unit));
+    });
+    const sections: ReportSection[] = [
+      {
+        heading: 'Stock Report',
+        productColumn: 'PRODUCT GROUP' as const,
+        lines: rawStock ? [this.reportRow('Raw Salt', rawStock.value, rawStock.unit)] : [],
+      },
+      {
+        heading: 'Overall Report',
+        productColumn: 'PRODUCT GROUP' as const,
+        lines: overallLines,
+      },
+    ].filter((section) => section.lines.length > 0);
 
-  private getApiPath(fileName: string): string {
-    const paths: Record<string, string> = {
-      'dashboard.json': '/api/dashboard',
-      'overall-report.json': '/api/reports/overall',
-      'stock-report.json': '/api/reports/stock',
-      'product-info.json': '/api/products/info',
-      'production-log.json': '/api/reports/production-log',
-      'recent-entries.json': '/api/reports/recent-entries',
-      'inventory-packaging.json': '/api/inventory/packaging',
-      'inventory-raw-salt.json': '/api/inventory/raw-salt',
-      'inventory-bundles.json': '/api/inventory/bundles',
-      'inventory-consumables.json': '/api/inventory/consumables',
-      'inventory-crystalline.json': '/api/inventory/crystalline',
+    return {
+      title: 'Overall Report',
+      generatedAt: new Date().toLocaleString(),
+      source: 'Combined inventory and summary report',
+      period: this.formatReportPeriodRange(summaryFilter),
+      template: 'inventory',
+      sections,
     };
-
-    return paths[fileName] ?? '/api/dashboard';
   }
 
-  private buildReport(title: string, sections: Array<{ heading: string; lines: string[] }>) {
+  private async safeReportData<T>(promise: Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await promise;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private reportRow(product: unknown, quantity: unknown, unit: unknown): string {
+    return `${this.cleanReportText(product)}\t${this.formatReportQuantity(quantity)}\t${this.cleanReportText(unit)}`;
+  }
+
+  private cleanReportText(value: unknown): string {
+    return String(value ?? '').replace(/\s+/g, ' ').trim() || 'N/A';
+  }
+
+  private formatReportQuantity(value: unknown): string {
+    const numeric = Number(String(value ?? '').replace(/,/g, ''));
+    if (!Number.isFinite(numeric)) {
+      return this.cleanReportText(value);
+    }
+
+    return numeric.toLocaleString('en-US', {
+      maximumFractionDigits: 3,
+    });
+  }
+
+  private formatReportPeriodRange(filter: DateFilterParams): string {
+    const start = filter.fromDate ? new Date(filter.fromDate) : null;
+    const end = filter.toDate ? new Date(filter.toDate) : null;
+
+    if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return this.currentPeriodLabel();
+    }
+
+    const selectedDays = this.reportDayCount(start, end);
+    const dayLabel = `${selectedDays} day${selectedDays === 1 ? '' : 's'}`;
+
+    return `${this.formatReportDate(start)} to ${this.formatReportDate(end)} (${dayLabel})`;
+  }
+
+  private formatReportDate(date: Date): string {
+    const { day, month, year } = this.indiaDateParts(date);
+
+    return `${day}${this.ordinalSuffix(day)} ${month} ${year}`;
+  }
+
+  private reportDayCount(start: Date, end: Date): number {
+    const startParts = this.indiaDateParts(start);
+    const endParts = this.indiaDateParts(end);
+    const startUtc = Date.UTC(startParts.year, startParts.monthIndex, startParts.day);
+    const endUtc = Date.UTC(endParts.year, endParts.monthIndex, endParts.day);
+
+    return Math.max(1, Math.round((endUtc - startUtc) / 86400000) + 1);
+  }
+
+  private indiaDateParts(date: Date): { day: number; month: string; monthIndex: number; year: number } {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    }).formatToParts(date);
+    const partValue = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+    const month = partValue('month');
+
+    return {
+      day: Number(partValue('day')),
+      month,
+      monthIndex: new Date(`${month} 1, 2000`).getMonth(),
+      year: Number(partValue('year')),
+    };
+  }
+
+  private ordinalSuffix(day: number): string {
+    if (day % 100 >= 11 && day % 100 <= 13) {
+      return 'th';
+    }
+
+    switch (day % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
+  }
+
+  private currentReportFilter(periodOverride?: DatePeriod): DateFilterParams {
+    return this.dateFilter.buildActiveFilter(periodOverride);
+  }
+
+  private currentPeriodLabel(): string {
+    const period = this.dateFilter.getCurrentPeriod();
+    return this.dateFilter.getFormattedDate(period, new Date());
+  }
+
+  private reportTemplateForRoute(): 'summary' | 'inventory' {
+    const cleanUrl = this.router.url.split('?')[0].split('#')[0];
+    return cleanUrl.startsWith('/tabs/stock-report') || cleanUrl.includes('/inventory') || cleanUrl.startsWith('/tabs/product-info')
+      ? 'inventory'
+      : 'summary';
+  }
+
+  private buildReport(title: string, sections: Array<{ heading: string; lines: string[] }>, template: 'summary' | 'inventory' = 'summary'): ReportPayload {
     return {
       title: `${this.appName} - ${title}`,
       generatedAt: new Date().toLocaleString(),
       source: location.pathname,
+      period: this.currentPeriodLabel(),
+      template,
       sections: sections.filter((section) => section.lines.length > 0),
     };
   }
@@ -455,7 +548,13 @@ export class TabsPage implements OnDestroy {
   }
 
   private buildOverallReport(data: any) {
-    const chart = data.analytics?.bundlesPacked;
+    const analytics = [
+      data.analytics?.bundlesPacked,
+      data.analytics?.materialConsumed,
+      data.analytics?.newStock,
+      data.analytics?.orders,
+    ].filter(Boolean);
+
     return this.buildReport('Overall Report', [
       {
         heading: 'Performance Summary',
@@ -464,10 +563,10 @@ export class TabsPage implements OnDestroy {
           return `${kpi.label}: ${kpi.value}${kpi.unit ? ` ${kpi.unit}` : ''}${details ? ` (${details})` : ''}`;
         }),
       },
-      {
-        heading: 'Bundles Packed Trend',
-        lines: chart ? chart.labels.map((label: string, index: number) => `${label}: ${chart.data[index]} bundles`) : [],
-      },
+      ...analytics.map((chart: any) => ({
+        heading: chart.label || 'Performance Trend',
+        lines: chart.labels.map((label: string, index: number) => `${label}: ${chart.data[index] ?? 0}`),
+      })),
     ]);
   }
 
@@ -479,7 +578,7 @@ export class TabsPage implements OnDestroy {
           `${card.title}: ${card.value} ${card.unit} - ${card.trend?.text ?? this.statusLabel(card.status)}`
         ),
       },
-    ]);
+    ], 'inventory');
   }
 
   private buildProductInfoReport(data: any) {
@@ -505,7 +604,7 @@ export class TabsPage implements OnDestroy {
           `${item.name}: ${item.quantity} ${item.unit} - ${this.statusLabel(item.status)}`
         ),
       })),
-    ]);
+    ], 'inventory');
   }
 
   private buildInventoryTableReport(data: any, fallbackTitle: string) {
@@ -516,7 +615,7 @@ export class TabsPage implements OnDestroy {
           `${item.productGroup}${item.subLabel ? ` (${item.subLabel})` : ''}: ${item.quantity} ${item.unit} - ${this.statusLabel(item.status)}`
         ),
       },
-    ]);
+    ], 'inventory');
   }
 
   private buildPackagingReport(data: any, mode: 'all' | 'rolls' | 'bags') {
@@ -535,7 +634,7 @@ export class TabsPage implements OnDestroy {
     return this.buildReport(title, [
       ...(mode !== 'bags' ? [{ heading: 'Packaging Rolls', lines: rollLines }] : []),
       ...(mode !== 'rolls' ? [{ heading: 'Packaging Bags', lines: bagLines }] : []),
-    ]);
+    ], 'inventory');
   }
 
   private statusLabel(status: string): string {
@@ -555,20 +654,6 @@ export class TabsPage implements OnDestroy {
       default:
         return status || 'N/A';
     }
-  }
-
-  private reportPayloadToPdfLines(payload: any, now: Date): string[] {
-    return [
-      payload.title || `${this.appName} Report`,
-      `Generated: ${payload.generatedAt || now.toLocaleString()}`,
-      `Source: ${payload.source || location.pathname}`,
-      '',
-      ...(payload.sections ?? []).flatMap((section: any) => [
-        section.heading,
-        ...(section.lines ?? []).map((line: string) => `- ${line}`),
-        '',
-      ]),
-    ];
   }
 
   private getActiveContentRoot(): HTMLElement | null {
@@ -651,23 +736,181 @@ export class TabsPage implements OnDestroy {
     return lines;
   }
 
-  private buildPdf(lines: string[]): Blob {
-    const sanitizedLines = lines.map((line) => this.escapePdfText(line));
-    const textCommands = sanitizedLines
-      .map((line, index) => {
-        const size = index === 0 ? 18 : 10;
-        const y = 760 - index * 20;
-        return `BT /F1 ${size} Tf 54 ${y} Td (${line}) Tj ET`;
-      })
-      .join('\n');
-    const content = `${textCommands}\n`;
-    const objects = [
-      '<< /Type /Catalog /Pages 2 0 R >>',
-      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>`,
-      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-      `<< /Length ${content.length} >>\nstream\n${content}endstream`,
-    ];
+  private buildPdf(payload: ReportPayload, _now: Date): Blob {
+    const pageWidth = 595;
+    const pageHeight = 842;
+    const marginX = 36;
+    const bottomMargin = 42;
+    const contentWidth = pageWidth - marginX * 2;
+    const sections = (payload.sections || []).filter((section) => section.lines?.length);
+    const template = payload.template || 'summary';
+    const pages: string[][] = [];
+    let commands: string[] = [];
+    let cursorY = 0;
+
+    const color = {
+      ink: '0.06 0.08 0.12',
+      muted: '0.35 0.39 0.46',
+      blue: '0.02 0.35 0.67',
+      paleBlue: '0.93 0.96 1',
+      paleGray: '0.96 0.97 0.99',
+      border: '0.82 0.85 0.9',
+      white: '1 1 1',
+    };
+    const addFill = (fill: string) => commands.push(`${fill} rg`);
+    const addStroke = (stroke: string) => commands.push(`${stroke} RG`);
+    const rect = (x: number, y: number, width: number, height: number, fill: string, stroke?: string) => {
+      addFill(fill);
+      commands.push(`${x} ${y} ${width} ${height} re f`);
+      if (stroke) {
+        addStroke(stroke);
+        commands.push(`${x} ${y} ${width} ${height} re S`);
+      }
+    };
+    const text = (value: string, x: number, y: number, size = 10, bold = false, fill = color.ink) => {
+      addFill(fill);
+      commands.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x} ${y} Td (${this.escapePdfText(value)}) Tj ET`);
+    };
+    const line = (x1: number, y1: number, x2: number, y2: number, stroke = color.border) => {
+      addStroke(stroke);
+      commands.push(`0.6 w ${x1} ${y1} m ${x2} ${y2} l S`);
+    };
+    const wrap = (value: string, limit: number) => this.wrapText(value, limit);
+    const drawSummaryCard = () => {
+      const periodLines = wrap(payload.period || this.currentPeriodLabel(), 72).slice(0, 2);
+      const cardTopY = 826;
+      const cardHeight = periodLines.length > 1 ? 44 : 36;
+
+      rect(marginX, cardTopY - cardHeight, contentWidth, cardHeight, color.paleGray, color.border);
+      text('SUMMARY PERIOD', marginX + 10, cardTopY - 13, 6.8, true, color.muted);
+      periodLines.forEach((periodLine, lineIndex) => {
+        text(periodLine, marginX + 10, cardTopY - 27 - lineIndex * 11, 9, true, color.ink);
+      });
+      cursorY = cardTopY - cardHeight - 16;
+    };
+    const startPage = () => {
+      commands = [];
+      pages.push(commands);
+      rect(0, 0, pageWidth, pageHeight, color.white);
+      drawSummaryCard();
+    };
+    const ensureSpace = (height: number) => {
+      if (cursorY - height < bottomMargin) {
+        startPage();
+      }
+    };
+    const drawSectionTitle = (heading: string) => {
+      ensureSpace(28);
+      rect(marginX, cursorY - 2, contentWidth, 20, template === 'inventory' ? color.paleBlue : color.paleGray, color.border);
+      text(heading.toUpperCase(), marginX + 10, cursorY + 4, 9, true, color.ink);
+      cursorY -= 28;
+    };
+    const parseLine = (value: string) => {
+      const columns = value.split('\t');
+      if (columns.length >= 3) {
+        return {
+          label: columns[0].trim(),
+          value: columns[1].trim(),
+          status: columns.slice(2).join(' ').trim(),
+        };
+      }
+
+      const [label, rest = ''] = value.split(/:\s(.+)/);
+      const [primary, status = ''] = rest.split(/\s-\s(.+)/);
+      return {
+        label: (label || value).trim(),
+        value: (primary || '').trim(),
+        status: (status || '').trim(),
+      };
+    };
+    const drawCards = (section: ReportSection) => {
+      drawSectionTitle(section.heading);
+      const gap = 10;
+      const cardWidth = (contentWidth - gap) / 2;
+      const cardHeight = 58;
+      section.lines.forEach((item, index) => {
+        ensureSpace(cardHeight + 10);
+        const parsed = parseLine(item);
+        const column = index % 2;
+        const x = marginX + column * (cardWidth + gap);
+
+        if (column === 0 && index > 0) {
+          cursorY -= cardHeight + 10;
+        }
+
+        rect(x, cursorY - cardHeight + 12, cardWidth, cardHeight, color.white, color.border);
+        text(parsed.label.toUpperCase(), x + 10, cursorY - 4, 7, true, color.muted);
+        wrap(parsed.value || '-', 28).slice(0, 2).forEach((wrapped, lineIndex) => {
+          text(wrapped, x + 10, cursorY - 22 - lineIndex * 12, lineIndex === 0 ? 15 : 9, lineIndex === 0, color.ink);
+        });
+        if (parsed.status) {
+          text(parsed.status, x + 10, cursorY - 48, 7, false, color.muted);
+        }
+      });
+      cursorY -= cardHeight + 16;
+    };
+    const drawTable = (section: ReportSection) => {
+      drawSectionTitle(section.heading);
+      const col1 = 318;
+      const col2 = 88;
+      const productColumn = section.productColumn || (template === 'inventory' ? 'PRODUCT GROUP' : 'PRODUCT BRAND');
+
+      ensureSpace(20);
+      rect(marginX, cursorY - 2, contentWidth, 17, color.blue);
+      text(productColumn, marginX + 8, cursorY + 3, 6.5, true, color.white);
+      text('QUANTITY', marginX + col1 + 8, cursorY + 3, 6.5, true, color.white);
+      text('UNIT', marginX + col1 + col2 + 8, cursorY + 3, 6.5, true, color.white);
+      cursorY -= 19;
+
+      section.lines.forEach((item, index) => {
+        const parsed = parseLine(item);
+        const labelLines = wrap(parsed.label, 52);
+        const valueLines = wrap(parsed.value || '-', 13);
+        const statusLines = wrap(parsed.status || '-', 18);
+        const rowHeight = Math.max(23, 10 + Math.max(labelLines.length, valueLines.length, statusLines.length) * 10);
+        ensureSpace(rowHeight + 2);
+
+        if (index % 2 === 0) {
+          rect(marginX, cursorY - rowHeight + 10, contentWidth, rowHeight, color.paleGray);
+        }
+        labelLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + 8, cursorY - 2 - lineIndex * 10, 8, lineIndex === 0, color.ink));
+        valueLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + col1 + 8, cursorY - 2 - lineIndex * 10, 8, lineIndex === 0, color.ink));
+        statusLines.slice(0, 3).forEach((wrapped, lineIndex) => text(wrapped, marginX + col1 + col2 + 8, cursorY - 2 - lineIndex * 10, 7.5, false, color.muted));
+        line(marginX, cursorY - rowHeight + 8, pageWidth - marginX, cursorY - rowHeight + 8, color.border);
+        cursorY -= rowHeight;
+      });
+      cursorY -= 8;
+    };
+
+    startPage();
+    sections.forEach((section) => drawTable(section));
+
+    const pageStreams = pages.map((pageCommands, pageIndex) => {
+      pageCommands.push('0.35 0.38 0.45 rg');
+      pageCommands.push(`BT /F1 8 Tf ${marginX} 26 Td (${this.escapePdfText(`${this.appName} report - Page ${pageIndex + 1} of ${pages.length}`)}) Tj ET`);
+      pageCommands.push(`BT /F1 8 Tf ${pageWidth - 156} 26 Td (${this.escapePdfText(payload.source || location.pathname)}) Tj ET`);
+      return `${pageCommands.join('\n')}\n`;
+    });
+
+    const objects: string[] = [];
+    const addObject = (object: string) => {
+      objects.push(object);
+      return objects.length;
+    };
+    const catalogId = addObject('');
+    const pagesId = addObject('');
+    const fontRegularId = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    const fontBoldId = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+    const pageIds: number[] = [];
+
+    pageStreams.forEach((stream) => {
+      const contentId = addObject(`<< /Length ${stream.length} >>\nstream\n${stream}endstream`);
+      const pageId = addObject(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+      pageIds.push(pageId);
+    });
+
+    objects[catalogId - 1] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
+    objects[pagesId - 1] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>`;
 
     let pdf = '%PDF-1.4\n';
     const offsets = [0];
@@ -681,7 +924,7 @@ export class TabsPage implements OnDestroy {
     for (let index = 1; index <= objects.length; index++) {
       pdf += `${offsets[index].toString().padStart(10, '0')} 00000 n \n`;
     }
-    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
 
     return new Blob([pdf], { type: 'application/pdf' });
   }

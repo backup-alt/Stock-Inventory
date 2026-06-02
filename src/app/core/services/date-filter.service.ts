@@ -24,6 +24,13 @@ export interface DateRangeSelection {
   endIso: string;
 }
 
+export interface ActiveDateSelection {
+  period: DatePeriod;
+  date: string;
+  range: DateRangeSelection;
+  rangeType?: 'custom';
+}
+
 export interface ResolvedDateFilter {
   period: DatePeriod;
   date: string;
@@ -42,16 +49,56 @@ export const DATE_PERIOD_OPTIONS: DatePeriodOption[] = [
 export class DateFilterService {
   readonly periodOptions = DATE_PERIOD_OPTIONS;
   private readonly istOffsetMinutes = 330;
+  private activePeriod: DatePeriod = 'daily';
+  private activeDateIso = this.getInputDateValue();
+  private activeRange = this.getDateRange(this.activePeriod, this.activeDateIso);
 
   private periodSubject = new BehaviorSubject<DatePeriod>('daily');
   period$ = this.periodSubject.asObservable();
 
   setPeriod(period: DatePeriod) {
+    this.activePeriod = period;
+    if (period !== 'custom') {
+      this.activeRange = this.getDateRange(period, this.activeDateIso);
+    }
     this.periodSubject.next(period);
   }
 
   getCurrentPeriod(): DatePeriod {
     return this.periodSubject.value;
+  }
+
+  setActiveSelection(period: DatePeriod, date: string, range?: DateRangeSelection) {
+    const selectedRange = range?.startIso
+      ? this.normalizeRange(range.startIso, range.endIso || range.startIso)
+      : this.getDateRange(period, date);
+
+    this.activePeriod = period;
+    this.activeDateIso = date;
+    this.activeRange = selectedRange;
+    this.periodSubject.next(period);
+  }
+
+  getActiveSelection(): ActiveDateSelection {
+    return {
+      period: this.activePeriod,
+      date: this.activeDateIso,
+      range: { ...this.activeRange },
+      rangeType: this.activePeriod === 'custom' ? 'custom' : undefined,
+    };
+  }
+
+  buildActiveFilter(periodOverride?: DatePeriod): ResolvedDateFilter {
+    const active = this.getActiveSelection();
+    const isCustomRange = active.period === 'custom';
+    const period = periodOverride ?? (isCustomRange ? 'weekly' : active.period);
+    const filter = this.buildFilter(
+      period,
+      active.date,
+      isCustomRange || !periodOverride ? active.range : undefined
+    );
+
+    return isCustomRange ? { ...filter, rangeType: 'custom' as const } : filter;
   }
 
   getFormattedDate(
