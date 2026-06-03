@@ -73,6 +73,10 @@ export class Tab2Page extends DateRangePageBase implements OnInit {
     this.router.navigate(['/tabs/production-log']);
   }
 
+  get showPerformanceAnalytics(): boolean {
+    return this.activePeriod !== 'daily' && this.analyticsCharts.length > 0;
+  }
+
   private applyDemoPeriod() {
     if (!this.baseData) {
       return;

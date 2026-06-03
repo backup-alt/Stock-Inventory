@@ -422,8 +422,14 @@ export class TabsPage implements OnDestroy {
       { type: 'heading', heading: 'Finished Goods' },
     ];
 
-    (stock?.data?.finishedGoods || []).forEach((plant: any) => {
-      (plant.groups || []).forEach((group: any) => {
+    const finishedGoodsPlants = [...(stock?.data?.finishedGoods || [])]
+      .sort((left: any, right: any) => this.reportUnitSort(this.reportUnitLabel(left?.plantName)) - this.reportUnitSort(this.reportUnitLabel(right?.plantName)));
+
+    finishedGoodsPlants.forEach((plant: any) => {
+      const productGroups = [...(plant.groups || [])]
+        .sort((left: any, right: any) => this.firstReportText(left?.productGroup, 'Products').localeCompare(this.firstReportText(right?.productGroup, 'Products')));
+
+      productGroups.forEach((group: any) => {
         const products = group.products || [];
         blocks.push({
           type: 'table',
@@ -626,7 +632,7 @@ export class TabsPage implements OnDestroy {
     const groups = new Map<string, any[]>();
 
     rows.forEach((row) => {
-      const unitName = this.reportUnitLabel(row?.plantName);
+      const unitName = this.reportUnitLabelFromRow(row);
       const group = groups.get(unitName) || [];
       group.push(row);
       groups.set(unitName, group);
@@ -638,6 +644,36 @@ export class TabsPage implements OnDestroy {
   private reportUnitLabel(value: unknown): string {
     const unitName = this.cleanReportText(value);
     return unitName === 'N/A' ? 'General / Unassigned' : unitName;
+  }
+
+  private reportUnitLabelFromRow(row: any): string {
+    const plantName = this.reportUnitLabel(row?.plantName);
+
+    if (plantName !== 'General / Unassigned') {
+      return plantName;
+    }
+
+    return this.reportUnitLabelFromProductCode(row?.productCode);
+  }
+
+  private reportUnitLabelFromProductCode(value: unknown): string {
+    const productCode = this.cleanReportText(value);
+
+    if (productCode === 'N/A') {
+      return 'General / Unassigned';
+    }
+
+    const unitMarkerIndex = productCode.lastIndexOf('--');
+    const candidate = unitMarkerIndex >= 0
+      ? productCode.slice(unitMarkerIndex + 2).replace(/^-+|-+$/g, '').trim()
+      : '';
+
+    if (/unit\s*\d/i.test(candidate)) {
+      return this.cleanReportText(candidate);
+    }
+
+    const match = productCode.match(/unit\s*\d[^-]*/i);
+    return match ? this.cleanReportText(match[0]) : 'General / Unassigned';
   }
 
   private reportUnitSort(unitName: string): number {
