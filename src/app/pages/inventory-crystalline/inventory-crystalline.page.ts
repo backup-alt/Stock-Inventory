@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { DataService } from '../../core/services/data.service';
 import { DateFilterService } from '../../core/services/date-filter.service';
 import { DateRangePageBase } from '../../core/services/date-range-page-base';
@@ -17,6 +18,7 @@ export class InventoryCrystallinePage extends DateRangePageBase implements OnIni
 
   constructor(
     private dataService: DataService,
+    private router: Router,
     dateFilter: DateFilterService
   ) {
     super(dateFilter);
@@ -32,7 +34,11 @@ export class InventoryCrystallinePage extends DateRangePageBase implements OnIni
       this.isLoading = true;
     }
     this.hasError = false;
-    this.dataService.getCrystallineInventory(this.dateQuery()).subscribe({
+    const request = this.isProductInventoryRoute
+      ? this.dataService.getProductInventory(this.dateQuery())
+      : this.dataService.getCrystallineInventory(this.dateQuery());
+
+    request.subscribe({
       next: (data) => {
         this.data = data;
         this.isLoading = false;
@@ -44,6 +50,10 @@ export class InventoryCrystallinePage extends DateRangePageBase implements OnIni
         this.completeRefresh(refresher);
       }
     });
+  }
+
+  get errorTitle(): string {
+    return this.isProductInventoryRoute ? 'Product Inventory' : 'Crystalline Inventory';
   }
 
   getStatusIcon(status: string): string {
@@ -74,5 +84,9 @@ export class InventoryCrystallinePage extends DateRangePageBase implements OnIni
 
   protected onDateFilterChanged(): void {
     this.loadData();
+  }
+
+  private get isProductInventoryRoute(): boolean {
+    return this.router.url.includes('product-inventory');
   }
 }

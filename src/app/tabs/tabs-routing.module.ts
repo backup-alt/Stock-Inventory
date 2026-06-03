@@ -60,6 +60,10 @@ const routes: Routes = [
         loadChildren: () => import('../pages/inventory-crystalline/inventory-crystalline.module').then(m => m.InventoryCrystallinePageModule)
       },
       {
+        path: 'inventory/product-inventory',
+        loadChildren: () => import('../pages/inventory-crystalline/inventory-crystalline.module').then(m => m.InventoryCrystallinePageModule)
+      },
+      {
         path: '',
         redirectTo: '/tabs/dashboard',
         pathMatch: 'full'

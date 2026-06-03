@@ -1396,19 +1396,17 @@ export class TabsPage implements OnDestroy {
       }
 
       if (block.heading === 'Overall Report') {
-        ensureSpace(88);
-        rect(marginX, cursorY - 20, contentWidth, 20, color.paleGray, color.border);
-        text(block.heading.toUpperCase(), marginX + 8, cursorY - 13, 9.6, true, color.title);
-        cursorY -= 24;
+        const periodLines = wrap(block.subtitle || payload.period || this.currentPeriodLabel(), 58).slice(0, 2);
+        const headerHeight = periodLines.length > 1 ? 48 : 38;
 
-        if (block.subtitle) {
-          text(block.subtitle, marginX + 8, cursorY - 2, 8.2, false, color.muted);
-          cursorY -= 16;
-        }
-
-        if (!summaryCardDrawn) {
-          drawSummaryCard();
-        }
+        ensureSpace(headerHeight + 16);
+        rect(marginX, cursorY - headerHeight, contentWidth, headerHeight, color.paleGray, color.border);
+        text(block.heading.toUpperCase(), marginX + 10, cursorY - 14, 10.2, true, color.title);
+        text('REPORT PERIOD', marginX + 10, cursorY - 28, 6.5, true, color.muted);
+        periodLines.forEach((periodLine, lineIndex) => {
+          text(periodLine, marginX + 86, cursorY - 28 - lineIndex * 9, 8.1, lineIndex === 0, color.ink);
+        });
+        cursorY -= headerHeight + 12;
         pageHasContent = true;
         return;
       }

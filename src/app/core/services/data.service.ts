@@ -142,6 +142,10 @@ export class DataService {
     return this.inventoryTable('crystalline', filter);
   }
 
+  getProductInventory(filter?: DateFilterParams): Observable<InventoryTableData> {
+    return this.inventoryTable('product-inventory', filter);
+  }
+
   getProductionLog(filter?: DateFilterParams): Observable<InventoryTableData> {
     const reportFilter = filter ?? this.defaultFilter('monthly');
 
@@ -436,6 +440,10 @@ function rowsForSlug(stock: any, slug: string): InventoryRow[] {
 
   if (slug === 'crystalline') {
     return crystallineRows(stock);
+  }
+
+  if (slug === 'product-inventory') {
+    return finishedGoodsRows(stock);
   }
 
   return [];
@@ -1005,7 +1013,8 @@ function categoryTitle(slug: string): string {
     'packaging-rolls': 'Packaging Rolls Inventory',
     'packaging-bags': 'Packaging Bags Inventory',
     consumables: 'Consumables Inventory',
-    crystalline: 'Product Inventory',
+    crystalline: 'Crystalline Inventory',
+    'product-inventory': 'Product Inventory',
   };
 
   return titles[slug] || titleFromSlug(slug);
