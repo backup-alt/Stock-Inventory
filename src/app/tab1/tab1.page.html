@@ -17,8 +17,8 @@
         <div class="skeleton h-4 w-48 mb-4"></div>
         <div class="skeleton h-10 w-40 rounded-full"></div>
       </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div *ngFor="let i of [1,2,3,4]" class="bg-surface-container-lowest rounded-md p-3 border border-outline-variant/40 shadow-soft">
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        <div *ngFor="let i of [1,2,3]" class="bg-surface-container-lowest rounded-md p-3 border border-outline-variant/40 shadow-soft">
           <div class="skeleton h-3 w-20 mb-3"></div>
           <div class="skeleton h-8 w-16 mb-2"></div>
           <div class="skeleton h-3 w-24 mt-2"></div>
@@ -96,7 +96,7 @@
       </div>
 
       <!-- KPI Row -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
         <button *ngFor="let kpi of data.kpis"
                 type="button"
                 class="bg-surface-container-lowest rounded-md p-3 border border-outline-variant/40 shadow-soft flex min-w-0 flex-col justify-between text-left transition-all hover:border-primary/35 hover:bg-primary-container/10 active:scale-[0.98]"
@@ -112,7 +112,11 @@
             <span class="material-symbols-outlined text-[14px] text-primary">trending_up</span>
             <span class="font-body-md text-[12px] ml-1 font-semibold text-primary">{{kpi.trend.percentage}}</span>
           </div>
-          <div class="flex items-center mt-2 pt-2 border-t border-surface-variant text-on-surface-variant" *ngIf="kpi.footer && !kpi.trend">
+          <div class="flex items-center mt-2 pt-2 border-t border-surface-variant text-on-surface-variant"
+               [class.text-primary]="isStockEntriesFooter(kpi)"
+               [class.cursor-pointer]="isStockEntriesFooter(kpi)"
+               *ngIf="kpi.footer && !kpi.trend"
+               (click)="navigateKpiFooter(kpi, $event)">
             <span class="font-body-md text-[12px] font-semibold">{{kpi.footer}}</span>
             <span class="material-symbols-outlined text-[14px] ml-auto text-primary">arrow_forward</span>
           </div>

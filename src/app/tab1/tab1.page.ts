@@ -67,11 +67,19 @@ export class Tab1Page extends DateRangePageBase implements OnInit {
       this.navigateTo('production-log');
       return;
     }
+  }
 
-    if (label.includes('pending')) {
-      this.navigateTo('recent-entries');
+  navigateKpiFooter(kpi: KpiCard, event: MouseEvent) {
+    if (!this.isStockEntriesFooter(kpi)) {
       return;
     }
+
+    event.stopPropagation();
+    this.navigateTo('recent-entries');
+  }
+
+  isStockEntriesFooter(kpi: KpiCard): boolean {
+    return Boolean(kpi.footer?.toLowerCase().includes('stock entries'));
   }
 
   openCriticalStock() {
