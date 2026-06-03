@@ -376,10 +376,11 @@ export class TabsPage implements OnDestroy {
       this.safeReportData(firstValueFrom(this.dataService.getRawSummaryReport(summaryFilter)), { data: { reports: {} } }),
     ]);
     const period = this.formatReportPeriodRange(summaryFilter);
+    const reportSubtitle = this.formatReportPeriodSubtitle(summaryFilter);
     const blocks: ReportBlock[] = [
       { type: 'heading', heading: 'Stock Report' },
       ...this.stockReportBlocks(stockReport),
-      { type: 'heading', heading: 'Overall Report', subtitle: period },
+      { type: 'heading', heading: 'Overall Report', subtitle: reportSubtitle },
       ...this.summaryReportBlocks(summaryReport),
     ];
 
@@ -439,18 +440,21 @@ export class TabsPage implements OnDestroy {
       });
     });
 
-    blocks.push({ type: 'heading', heading: 'Inventory Stock' });
+    blocks.push({ type: 'heading', heading: 'Inventory Overview' });
     (stock?.data?.inventory || []).forEach((category: any) => {
       const products = category.products || [];
+      const categoryName = this.cleanReportText(category.productName || 'Inventory');
+
       blocks.push({
         type: 'table',
-        heading: this.cleanReportText(category.productName || 'Inventory'),
+        heading: categoryName === 'Bag (unpacked)' ? 'Inventory Overview' : `Category: ${categoryName}`,
         totals: this.unitTotals(products),
-        columns: ['PRODUCT GROUP', 'QUANTITY', 'UNIT'],
+        columns: ['PRODUCT GROUP', 'QUANTITY', 'UNIT', 'STOCK'],
         rows: products.map((product: any) => [
           this.cleanReportText(product.productGroup),
           this.formatReportQuantity(product.qty),
           this.displayReportUnit(product.unitName),
+          this.stockHealthLabel(product.qty),
         ]),
       });
     });
@@ -670,18 +674,32 @@ export class TabsPage implements OnDestroy {
     const normalized = unit.toLowerCase();
 
     if (normalized === 'piece' || normalized === 'pieces') {
-      return "pc's";
+      return 'Piece';
     }
 
     if (normalized === 'kilogram' || normalized === 'kilograms') {
-      return 'kg';
+      return 'Kilogram';
     }
 
     if (normalized === 'metric ton' || normalized === 'metric tons') {
-      return 'MT';
+      return 'Metric Ton';
     }
 
     return unit;
+  }
+
+  private stockHealthLabel(value: unknown): string {
+    const quantity = Number(String(value ?? '').replace(/,/g, ''));
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return 'Out of Stock';
+    }
+
+    if (quantity <= 100) {
+      return 'Low';
+    }
+
+    return 'Healthy';
   }
 
   private formatReportPeriodRange(filter: DateFilterParams): string {
@@ -692,16 +710,33 @@ export class TabsPage implements OnDestroy {
       return this.currentPeriodLabel();
     }
 
-    const selectedDays = this.reportDayCount(start, end);
-    const dayLabel = `${selectedDays} day${selectedDays === 1 ? '' : 's'}`;
+    return `${this.formatReportDate(start)} - ${this.formatReportDate(end)}`;
+  }
 
-    return `${this.formatReportDate(start)} to ${this.formatReportDate(end)} (${dayLabel})`;
+  private formatReportPeriodSubtitle(filter: DateFilterParams): string {
+    const start = filter.fromDate ? new Date(filter.fromDate) : null;
+    const end = filter.toDate ? new Date(filter.toDate) : null;
+
+    if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return this.currentPeriodLabel();
+    }
+
+    return `${this.formatReportLongDate(start)} - ${this.formatReportLongDate(end)}`;
   }
 
   private formatReportDate(date: Date): string {
     const { day, month, year } = this.indiaDateParts(date);
 
-    return `${day}${this.ordinalSuffix(day)} ${month} ${year}`;
+    return `${String(day).padStart(2, '0')} ${month} ${year}`;
+  }
+
+  private formatReportLongDate(date: Date): string {
+    const weekday = new Intl.DateTimeFormat('en-GB', {
+      weekday: 'long',
+      timeZone: 'Asia/Kolkata',
+    }).format(date);
+
+    return `${weekday}, ${this.formatReportDate(date)}`;
   }
 
   private reportDayCount(start: Date, end: Date): number {
@@ -988,11 +1023,11 @@ export class TabsPage implements OnDestroy {
     return lines;
   }
 
-  private buildPdf(payload: ReportPayload, _now: Date): Blob {
+  private buildPdf(payload: ReportPayload, now: Date): Blob {
     const pageWidth = 595;
     const pageHeight = 842;
-    const marginX = 36;
-    const bottomMargin = 42;
+    const marginX = 42.5;
+    const bottomMargin = 30;
     const contentWidth = pageWidth - marginX * 2;
     const sections = (payload.sections || []).filter((section) => section.lines?.length);
     const structuredBlocks = payload.blocks || [];
@@ -1000,14 +1035,16 @@ export class TabsPage implements OnDestroy {
     const pages: string[][] = [];
     let commands: string[] = [];
     let cursorY = 0;
+    let pageHasContent = false;
 
     const color = {
-      ink: '0.06 0.08 0.12',
-      muted: '0.35 0.39 0.46',
-      blue: '0.02 0.35 0.67',
-      paleBlue: '0.93 0.96 1',
-      paleGray: '0.96 0.97 0.99',
-      border: '0.82 0.85 0.9',
+      ink: '0.16 0.2 0.22',
+      title: '0.2 0.2 0.36',
+      muted: '0.37 0.41 0.44',
+      blue: '0.03 0.37 0.66',
+      paleBlue: '0.94 0.97 1',
+      paleGray: '0.97 0.98 0.99',
+      border: '0.84 0.87 0.91',
       white: '1 1 1',
     };
     const addFill = (fill: string) => commands.push(`${fill} rg`);
@@ -1030,22 +1067,66 @@ export class TabsPage implements OnDestroy {
     };
     const wrap = (value: string, limit: number) => this.wrapText(value, limit);
     const drawSummaryCard = () => {
-      const periodLines = wrap(payload.period || this.currentPeriodLabel(), 72).slice(0, 2);
-      const cardTopY = 826;
-      const cardHeight = periodLines.length > 1 ? 44 : 36;
+      const periodLines = wrap(payload.period || this.currentPeriodLabel(), 34).slice(0, 2);
+      const cardWidth = 250;
+      const cardHeight = periodLines.length > 1 ? 46 : 42;
 
-      rect(marginX, cardTopY - cardHeight, contentWidth, cardHeight, color.paleGray, color.border);
-      text('SUMMARY PERIOD', marginX + 10, cardTopY - 13, 6.8, true, color.muted);
+      rect(marginX, cursorY - cardHeight, cardWidth, cardHeight, color.paleGray, color.border);
+      text('SUMMARY PERIOD', marginX + 10, cursorY - 14, 6.8, true, color.muted);
       periodLines.forEach((periodLine, lineIndex) => {
-        text(periodLine, marginX + 10, cardTopY - 27 - lineIndex * 11, 9, true, color.ink);
+        text(periodLine, marginX + 10, cursorY - 30 - lineIndex * 11, 10, true, color.title);
       });
-      cursorY = cardTopY - cardHeight - 16;
+      cursorY -= cardHeight + 26;
     };
     const startPage = () => {
       commands = [];
       pages.push(commands);
       rect(0, 0, pageWidth, pageHeight, color.white);
-      drawSummaryCard();
+      cursorY = pageHeight - 50;
+      pageHasContent = false;
+    };
+    const generatedDateLabel = () => now.toLocaleString('en-US', {
+      timeZone: 'Asia/Kolkata',
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).replace(',', '');
+    const drawGeneratedCard = () => {
+      const cardWidth = 175;
+      const cardHeight = 58;
+      const x = pageWidth - marginX - cardWidth;
+      const y = pageHeight - 105;
+
+      rect(x, y, cardWidth, cardHeight, color.paleGray, color.border);
+      text('GENERATED DATE/TIME', x + 12, y + 39, 7, true, color.muted);
+      text(generatedDateLabel(), x + 12, y + 22, 9, true, color.ink);
+      text('Asia/Calcutta', x + 12, y + 8, 8, false, color.muted);
+    };
+    const drawTemplateTitle = (heading: string, subtitle?: string, generated = false) => {
+      if (pageHasContent) {
+        startPage();
+      }
+
+      text(heading, marginX, pageHeight - 70, 28, true, color.title);
+
+      if (subtitle) {
+        text(subtitle, marginX, pageHeight - 94, 10, false, color.muted);
+      }
+
+      if (generated) {
+        drawGeneratedCard();
+      }
+
+      cursorY = pageHeight - (generated ? 150 : 128);
+
+      if (heading === 'Overall Report') {
+        drawSummaryCard();
+      }
+
+      pageHasContent = true;
     };
     const ensureSpace = (height: number) => {
       if (cursorY - height < bottomMargin) {
@@ -1092,6 +1173,10 @@ export class TabsPage implements OnDestroy {
           return 92;
         }
 
+        if (normalized === 'stock') {
+          return 86;
+        }
+
         if (normalized.includes('customer')) {
           return 116;
         }
@@ -1109,8 +1194,18 @@ export class TabsPage implements OnDestroy {
       return widths.map((width) => width || flexibleWidth);
     };
     const drawHeadingBlock = (block: ReportHeadingBlock) => {
+      if (block.heading === 'Stock Report') {
+        drawTemplateTitle(block.heading, block.subtitle, true);
+        return;
+      }
+
+      if (block.heading === 'Overall Report') {
+        drawTemplateTitle(block.heading, block.subtitle);
+        return;
+      }
+
       ensureSpace(block.subtitle ? 50 : 34);
-      text(block.heading, marginX, cursorY, 18, true, color.ink);
+      text(block.heading, marginX, cursorY, 18, true, color.title);
       cursorY -= 18;
 
       if (block.subtitle) {
@@ -1119,6 +1214,7 @@ export class TabsPage implements OnDestroy {
       }
 
       cursorY -= 8;
+      pageHasContent = true;
     };
     const drawStructuredTable = (block: ReportTableBlock) => {
       const widths = tableColumnWidths(block.columns);
@@ -1136,7 +1232,7 @@ export class TabsPage implements OnDestroy {
       ensureSpace(48);
 
       if (block.heading) {
-        text(block.heading, marginX, cursorY, 12, true, color.ink);
+        text(block.heading, marginX, cursorY, 12, true, color.title);
 
         if (block.totals?.length) {
           const totals = `UNIT TOTALS  ${block.totals.join('   ')}`;
@@ -1180,9 +1276,11 @@ export class TabsPage implements OnDestroy {
         });
         line(marginX, cursorY - rowHeight + 7, pageWidth - marginX, cursorY - rowHeight + 7, color.border);
         cursorY -= rowHeight;
+        pageHasContent = true;
       });
 
       cursorY -= 12;
+      pageHasContent = true;
     };
     const drawReportBlock = (block: ReportBlock) => {
       if (block.type === 'heading') {
@@ -1259,9 +1357,11 @@ export class TabsPage implements OnDestroy {
     }
 
     const pageStreams = pages.map((pageCommands, pageIndex) => {
-      pageCommands.push('0.35 0.38 0.45 rg');
-      pageCommands.push(`BT /F1 8 Tf ${marginX} 26 Td (${this.escapePdfText(`${this.appName} report - Page ${pageIndex + 1} of ${pages.length}`)}) Tj ET`);
-      pageCommands.push(`BT /F1 8 Tf ${pageWidth - 156} 26 Td (${this.escapePdfText(payload.source || location.pathname)}) Tj ET`);
+      if (!structuredBlocks.length) {
+        pageCommands.push('0.35 0.38 0.45 rg');
+        pageCommands.push(`BT /F1 8 Tf ${marginX} 26 Td (${this.escapePdfText(`${this.appName} report - Page ${pageIndex + 1} of ${pages.length}`)}) Tj ET`);
+        pageCommands.push(`BT /F1 8 Tf ${pageWidth - 156} 26 Td (${this.escapePdfText(payload.source || location.pathname)}) Tj ET`);
+      }
       return `${pageCommands.join('\n')}\n`;
     });
 
