@@ -430,9 +430,9 @@ export class TabsPage implements OnDestroy {
           heading: this.cleanReportText(plant.plantName || 'Finished Goods'),
           eyebrow: this.cleanReportText(group.productGroup || 'Products'),
           totals: this.unitTotals(products),
-          columns: ['PRODUCT BRAND', 'QUANTITY', 'UNIT'],
+          columns: ['PRODUCT', 'QUANTITY', 'UNIT'],
           rows: products.map((product: any) => [
-            this.cleanReportText(product.productBrand || product.productGroup),
+            this.firstReportText(product.productBrand, product.productGroup),
             this.formatReportQuantity(product.qty),
             this.displayReportUnit(product.unitName),
           ]),
@@ -468,7 +468,7 @@ export class TabsPage implements OnDestroy {
       ...this.groupedSummaryTables(
         'Production Output',
         this.reportRows(reports, 'production', 'productionOutput', 'productionReport'),
-        'PRODUCT BRAND'
+        'PRODUCT'
       ),
       ...this.flatSummaryTables(
         'Inventory Used Consumed',
@@ -490,31 +490,29 @@ export class TabsPage implements OnDestroy {
 
   private groupedSummaryTables(sectionHeading: string, rows: any[], productColumn: string): ReportBlock[] {
     const blocks: ReportBlock[] = [{ type: 'heading', heading: sectionHeading }];
-    const groupedRows = new Map<string, any[]>();
+    this.rowsByReportUnit(rows).forEach(([unitName, unitRows]) => {
+      const groupedRows = new Map<string, any[]>();
 
-    rows.forEach((row) => {
-      const key = [
-        this.cleanReportText(row.plantName || 'N/A'),
-        this.cleanReportText(row.productGroup || row.productName || 'Products'),
-      ].join('|');
-      const group = groupedRows.get(key) || [];
-      group.push(row);
-      groupedRows.set(key, group);
-    });
+      unitRows.forEach((row) => {
+        const productGroup = this.firstReportText(row.productGroup, row.productName, 'Products');
+        const group = groupedRows.get(productGroup) || [];
+        group.push(row);
+        groupedRows.set(productGroup, group);
+      });
 
-    groupedRows.forEach((groupRows, key) => {
-      const [plantName, productGroup] = key.split('|');
-      blocks.push({
-        type: 'table',
-        heading: plantName === 'N/A' ? productGroup : plantName,
-        eyebrow: productGroup,
-        totals: this.unitTotals(groupRows),
-        columns: [productColumn, 'QUANTITY', 'UNIT'],
-        rows: groupRows.map((row) => [
-          this.cleanReportText(row.productBrand || row.productGroup || row.productName),
-          this.formatReportQuantity(this.reportQuantity(row)),
-          this.displayReportUnit(row.unit || row.unitName),
-        ]),
+      groupedRows.forEach((groupRows, productGroup) => {
+        blocks.push({
+          type: 'table',
+          heading: unitName,
+          eyebrow: productGroup,
+          totals: this.unitTotals(groupRows),
+          columns: [productColumn, 'QUANTITY', 'UNIT'],
+          rows: groupRows.map((row) => [
+            this.reportProductLabel(row),
+            this.formatReportQuantity(this.reportQuantity(row)),
+            this.displayReportUnit(row.unit || row.unitName),
+          ]),
+        });
       });
     });
 
@@ -526,40 +524,41 @@ export class TabsPage implements OnDestroy {
       return [];
     }
 
-    const groups = new Map<string, any[]>();
-    rows.forEach((row) => {
-      const key = this.cleanReportText(row.productName || sectionHeading);
-      const group = groups.get(key) || [];
-      group.push(row);
-      groups.set(key, group);
-    });
-
     const blocks: ReportBlock[] = [{ type: 'heading', heading: sectionHeading }];
-    groups.forEach((groupRows, productName) => {
-      const columns = numbered
-        ? ['#', 'PRODUCT NAME', 'PRODUCT GROUP', 'BRAND', 'QUANTITY', 'UNIT']
-        : ['PRODUCT GROUP', 'QUANTITY', 'UNIT'];
-      const tableRows = groupRows.map((row, index) => numbered
-        ? [
-            String(index + 1),
-            this.cleanReportText(row.productName || productName),
-            this.cleanReportText(row.productGroup),
-            this.cleanReportText(row.productBrand || '-'),
-            this.formatReportQuantity(this.reportQuantity(row)),
-            this.displayReportUnit(row.unit || row.unitName),
-          ]
-        : [
-            this.cleanReportText(row.productGroup || row.productBrand || row.productName),
-            this.formatReportQuantity(this.reportQuantity(row)),
-            this.displayReportUnit(row.unit || row.unitName),
-          ]);
+    this.rowsByReportUnit(rows).forEach(([unitName, unitRows]) => {
+      const groups = new Map<string, any[]>();
+      unitRows.forEach((row) => {
+        const key = this.firstReportText(row.productName, sectionHeading);
+        const group = groups.get(key) || [];
+        group.push(row);
+        groups.set(key, group);
+      });
 
-      blocks.push({
-        type: 'table',
-        heading: productName,
-        totals: this.unitTotals(groupRows),
-        columns,
-        rows: tableRows,
+      groups.forEach((groupRows, productName) => {
+        const columns = numbered
+          ? ['#', 'PRODUCT NAME', 'PRODUCT GROUP', 'QUANTITY', 'UNIT']
+          : ['PRODUCT GROUP', 'QUANTITY', 'UNIT'];
+        const tableRows = groupRows.map((row, index) => numbered
+          ? [
+              String(index + 1),
+              this.firstReportText(row.productName, productName),
+              this.firstReportText(row.productGroup, row.productBrand, row.itemName),
+              this.formatReportQuantity(this.reportQuantity(row)),
+              this.displayReportUnit(row.unit || row.unitName),
+            ]
+          : [
+              this.reportProductLabel(row),
+              this.formatReportQuantity(this.reportQuantity(row)),
+              this.displayReportUnit(row.unit || row.unitName),
+            ]);
+
+        blocks.push({
+          type: 'table',
+          heading: unitName === 'General / Unassigned' ? productName : `${unitName} - ${productName}`,
+          totals: this.unitTotals(groupRows),
+          columns,
+          rows: tableRows,
+        });
       });
     });
 
@@ -571,21 +570,23 @@ export class TabsPage implements OnDestroy {
       return [];
     }
 
-    return [
-      { type: 'heading', heading: 'Orders Placed' },
-      {
+    const blocks: ReportBlock[] = [{ type: 'heading', heading: 'Orders Placed' }];
+
+    this.rowsByReportUnit(rows).forEach(([unitName, unitRows]) => {
+      blocks.push({
         type: 'table',
-        heading: 'Customer Orders',
-        totals: this.unitTotals(rows),
-        columns: ['CUSTOMER', 'PRODUCT', 'QUANTITY', 'UNIT'],
-        rows: rows.map((row) => [
-          this.cleanReportText(row.customerName || row.customer || row.partyName || row.name || 'Customer'),
-          this.cleanReportText(row.productBrand || row.productGroup || row.productName || row.itemName),
+        heading: unitName === 'General / Unassigned' ? 'Orders' : `Orders - ${unitName}`,
+        totals: this.unitTotals(unitRows),
+        columns: ['PRODUCT', 'QUANTITY', 'UNIT'],
+        rows: unitRows.map((row) => [
+          this.reportProductLabel(row),
           this.formatReportQuantity(this.reportQuantity(row)),
           this.displayReportUnit(row.unit || row.unitName),
         ]),
-      },
-    ];
+      });
+    });
+
+    return blocks;
   }
 
   private nonEmptyBlocks(blocks: ReportBlock[]): ReportBlock[] {
@@ -619,6 +620,42 @@ export class TabsPage implements OnDestroy {
     }
 
     return [];
+  }
+
+  private rowsByReportUnit(rows: any[]): Array<[string, any[]]> {
+    const groups = new Map<string, any[]>();
+
+    rows.forEach((row) => {
+      const unitName = this.reportUnitLabel(row?.plantName);
+      const group = groups.get(unitName) || [];
+      group.push(row);
+      groups.set(unitName, group);
+    });
+
+    return Array.from(groups.entries()).sort(([left], [right]) => this.reportUnitSort(left) - this.reportUnitSort(right));
+  }
+
+  private reportUnitLabel(value: unknown): string {
+    const unitName = this.cleanReportText(value);
+    return unitName === 'N/A' ? 'General / Unassigned' : unitName;
+  }
+
+  private reportUnitSort(unitName: string): number {
+    const normalized = unitName.toLowerCase();
+
+    if (normalized.includes('unit 1')) {
+      return 1;
+    }
+
+    if (normalized.includes('unit 2')) {
+      return 2;
+    }
+
+    if (normalized.includes('general') || normalized.includes('unassigned')) {
+      return 99;
+    }
+
+    return 50;
   }
 
   private rawSaltStock(source: any): any {
@@ -655,7 +692,29 @@ export class TabsPage implements OnDestroy {
   }
 
   private cleanReportText(value: unknown): string {
-    return String(value ?? '').replace(/\s+/g, ' ').trim() || 'N/A';
+    const textValue = String(value ?? '').replace(/\s+/g, ' ').trim();
+    const normalized = textValue.toLowerCase();
+
+    if (!textValue || normalized === 'null' || normalized === 'undefined' || normalized === 'n/a' || normalized === 'na') {
+      return 'N/A';
+    }
+
+    return textValue;
+  }
+
+  private firstReportText(...values: unknown[]): string {
+    for (const value of values) {
+      const cleanValue = this.cleanReportText(value);
+      if (cleanValue !== 'N/A') {
+        return cleanValue;
+      }
+    }
+
+    return 'N/A';
+  }
+
+  private reportProductLabel(row: any): string {
+    return this.firstReportText(row?.productBrand, row?.productGroup, row?.productName, row?.itemName, row?.productCode);
   }
 
   private formatReportQuantity(value: unknown): string {
@@ -1200,6 +1259,10 @@ export class TabsPage implements OnDestroy {
 
       if (columns.length === 6 && normalizedColumns.includes('#')) {
         return [24, 136, 136, 84, 72, 58];
+      }
+
+      if (columns.length === 5 && normalizedColumns.includes('#')) {
+        return [24, 154, contentWidth - 324, 82, 64];
       }
 
       const widths: number[] = columns.map((column) => {
