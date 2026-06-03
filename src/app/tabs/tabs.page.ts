@@ -426,23 +426,26 @@ export class TabsPage implements OnDestroy {
       .sort((left: any, right: any) => this.reportUnitSort(this.reportUnitLabel(left?.plantName)) - this.reportUnitSort(this.reportUnitLabel(right?.plantName)));
 
     finishedGoodsPlants.forEach((plant: any) => {
-      const productGroups = [...(plant.groups || [])]
-        .sort((left: any, right: any) => this.firstReportText(left?.productGroup, 'Products').localeCompare(this.firstReportText(right?.productGroup, 'Products')));
+      const products = ([] as any[]).concat(...[...(plant.groups || [])]
+        .sort((left: any, right: any) => this.firstReportText(left?.productGroup, 'Products').localeCompare(this.firstReportText(right?.productGroup, 'Products')))
+        .map((group: any) => (group.products || []).map((product: any) => ({
+          ...product,
+          productGroup: this.firstReportText(group.productGroup, product.productGroup, 'Products'),
+        }))))
+        .sort((left: any, right: any) => this.compareReportProducts(left, right));
 
-      productGroups.forEach((group: any) => {
-        const products = group.products || [];
-        blocks.push({
-          type: 'table',
-          heading: this.cleanReportText(plant.plantName || 'Finished Goods'),
-          eyebrow: this.cleanReportText(group.productGroup || 'Products'),
-          totals: this.unitTotals(products),
-          columns: ['PRODUCT', 'QUANTITY', 'UNIT'],
-          rows: products.map((product: any) => [
-            this.firstReportText(product.productBrand, product.productGroup),
-            this.formatReportQuantity(product.qty),
-            this.displayReportUnit(product.unitName),
-          ]),
-        });
+      blocks.push({
+        type: 'table',
+        heading: this.reportUnitLabel(plant.plantName || 'Finished Goods'),
+        eyebrow: 'Finished Goods',
+        totals: this.unitTotals(products),
+        columns: ['PRODUCT GROUP', 'PRODUCT', 'QUANTITY', 'UNIT'],
+        rows: products.map((product: any) => [
+          this.firstReportText(product.productGroup, 'Products'),
+          this.firstReportText(product.productBrand, product.productName, product.productCode),
+          this.formatReportQuantity(product.qty),
+          this.displayReportUnit(product.unitName),
+        ]),
       });
     });
 
@@ -497,28 +500,20 @@ export class TabsPage implements OnDestroy {
   private groupedSummaryTables(sectionHeading: string, rows: any[], productColumn: string): ReportBlock[] {
     const blocks: ReportBlock[] = [{ type: 'heading', heading: sectionHeading }];
     this.rowsByReportUnit(rows).forEach(([unitName, unitRows]) => {
-      const groupedRows = new Map<string, any[]>();
+      const sortedRows = [...unitRows].sort((left, right) => this.compareReportProducts(left, right));
 
-      unitRows.forEach((row) => {
-        const productGroup = this.firstReportText(row.productGroup, row.productName, 'Products');
-        const group = groupedRows.get(productGroup) || [];
-        group.push(row);
-        groupedRows.set(productGroup, group);
-      });
-
-      groupedRows.forEach((groupRows, productGroup) => {
-        blocks.push({
-          type: 'table',
-          heading: unitName,
-          eyebrow: productGroup,
-          totals: this.unitTotals(groupRows),
-          columns: [productColumn, 'QUANTITY', 'UNIT'],
-          rows: groupRows.map((row) => [
-            this.reportProductLabel(row),
-            this.formatReportQuantity(this.reportQuantity(row)),
-            this.displayReportUnit(row.unit || row.unitName),
-          ]),
-        });
+      blocks.push({
+        type: 'table',
+        heading: unitName,
+        eyebrow: sectionHeading,
+        totals: this.unitTotals(sortedRows),
+        columns: ['PRODUCT GROUP', productColumn, 'QUANTITY', 'UNIT'],
+        rows: sortedRows.map((row) => [
+          this.firstReportText(row.productGroup, row.productName, 'Products'),
+          this.reportProductLabel(row),
+          this.formatReportQuantity(this.reportQuantity(row)),
+          this.displayReportUnit(row.unit || row.unitName),
+        ]),
       });
     });
 
@@ -532,39 +527,32 @@ export class TabsPage implements OnDestroy {
 
     const blocks: ReportBlock[] = [{ type: 'heading', heading: sectionHeading }];
     this.rowsByReportUnit(rows).forEach(([unitName, unitRows]) => {
-      const groups = new Map<string, any[]>();
-      unitRows.forEach((row) => {
-        const key = this.firstReportText(row.productName, sectionHeading);
-        const group = groups.get(key) || [];
-        group.push(row);
-        groups.set(key, group);
-      });
+      const sortedRows = [...unitRows].sort((left, right) => this.compareReportProducts(left, right));
+      const columns = numbered
+        ? ['#', 'PRODUCT NAME', 'PRODUCT GROUP', 'QUANTITY', 'UNIT']
+        : ['PRODUCT NAME', 'PRODUCT GROUP', 'QUANTITY', 'UNIT'];
+      const tableRows = sortedRows.map((row, index) => numbered
+        ? [
+            String(index + 1),
+            this.firstReportText(row.productName, sectionHeading),
+            this.firstReportText(row.productGroup, row.productBrand, row.itemName),
+            this.formatReportQuantity(this.reportQuantity(row)),
+            this.displayReportUnit(row.unit || row.unitName),
+          ]
+        : [
+            this.firstReportText(row.productName, sectionHeading),
+            this.firstReportText(row.productGroup, row.productBrand, row.itemName, row.productCode),
+            this.formatReportQuantity(this.reportQuantity(row)),
+            this.displayReportUnit(row.unit || row.unitName),
+          ]);
 
-      groups.forEach((groupRows, productName) => {
-        const columns = numbered
-          ? ['#', 'PRODUCT NAME', 'PRODUCT GROUP', 'QUANTITY', 'UNIT']
-          : ['PRODUCT GROUP', 'QUANTITY', 'UNIT'];
-        const tableRows = groupRows.map((row, index) => numbered
-          ? [
-              String(index + 1),
-              this.firstReportText(row.productName, productName),
-              this.firstReportText(row.productGroup, row.productBrand, row.itemName),
-              this.formatReportQuantity(this.reportQuantity(row)),
-              this.displayReportUnit(row.unit || row.unitName),
-            ]
-          : [
-              this.reportProductLabel(row),
-              this.formatReportQuantity(this.reportQuantity(row)),
-              this.displayReportUnit(row.unit || row.unitName),
-            ]);
-
-        blocks.push({
-          type: 'table',
-          heading: unitName === 'General / Unassigned' ? productName : `${unitName} - ${productName}`,
-          totals: this.unitTotals(groupRows),
-          columns,
-          rows: tableRows,
-        });
+      blocks.push({
+        type: 'table',
+        heading: unitName === 'General / Unassigned' ? sectionHeading : unitName,
+        eyebrow: unitName === 'General / Unassigned' ? undefined : sectionHeading,
+        totals: this.unitTotals(sortedRows),
+        columns,
+        rows: tableRows,
       });
     });
 
@@ -751,6 +739,18 @@ export class TabsPage implements OnDestroy {
 
   private reportProductLabel(row: any): string {
     return this.firstReportText(row?.productBrand, row?.productGroup, row?.productName, row?.itemName, row?.productCode);
+  }
+
+  private compareReportProducts(left: any, right: any): number {
+    const leftGroup = this.firstReportText(left?.productGroup, left?.productName, 'Products');
+    const rightGroup = this.firstReportText(right?.productGroup, right?.productName, 'Products');
+    const groupSort = leftGroup.localeCompare(rightGroup);
+
+    if (groupSort !== 0) {
+      return groupSort;
+    }
+
+    return this.reportProductLabel(left).localeCompare(this.reportProductLabel(right));
   }
 
   private formatReportQuantity(value: unknown): string {
@@ -1323,6 +1323,10 @@ export class TabsPage implements OnDestroy {
 
       if (columns.length === 4 && normalizedColumns.includes('stock')) {
         return [contentWidth - 222, 82, 64, 76];
+      }
+
+      if (columns.length === 4 && normalizedColumns.includes('product group') && normalizedColumns.some((column) => column.includes('product'))) {
+        return [148, contentWidth - 294, 82, 64];
       }
 
       if (columns.length === 4 && normalizedColumns.includes('customer')) {
