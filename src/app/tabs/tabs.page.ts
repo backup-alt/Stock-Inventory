@@ -1095,14 +1095,14 @@ export class TabsPage implements OnDestroy {
     const drawSummaryCard = () => {
       const periodLines = wrap(payload.period || this.currentPeriodLabel(), 64).slice(0, 2);
       const cardWidth = contentWidth;
-      const cardHeight = periodLines.length > 1 ? 46 : 42;
+      const cardHeight = periodLines.length > 1 ? 40 : 34;
 
       rect(marginX, cursorY - cardHeight, cardWidth, cardHeight, color.paleGray, color.border);
-      text('SUMMARY PERIOD', marginX + 10, cursorY - 14, 6.8, true, color.muted);
+      text('SUMMARY PERIOD', marginX + 10, cursorY - 13, 6.8, true, color.muted);
       periodLines.forEach((periodLine, lineIndex) => {
-        text(periodLine, marginX + 10, cursorY - 30 - lineIndex * 11, 10, true, color.title);
+        text(periodLine, marginX + 10, cursorY - 26 - lineIndex * 10, 9.2, true, color.title);
       });
-      cursorY -= cardHeight + 26;
+      cursorY -= cardHeight + 14;
     };
     const startPage = () => {
       commands = [];
@@ -1122,31 +1122,31 @@ export class TabsPage implements OnDestroy {
     }).replace(',', '');
     const drawGeneratedCard = () => {
       const cardWidth = 175;
-      const cardHeight = 58;
+      const cardHeight = 50;
       const x = pageWidth - marginX - cardWidth;
-      const y = pageHeight - 108;
+      const y = pageHeight - 100;
 
       rect(x, y, cardWidth, cardHeight, color.paleGray, color.border);
-      text('GENERATED DATE/TIME', x + 12, y + 39, 7, true, color.muted);
-      text(generatedDateLabel(), x + 12, y + 22, 9, true, color.ink);
-      text('Asia/Calcutta', x + 12, y + 8, 8, false, color.muted);
+      text('GENERATED DATE/TIME', x + 12, y + 33, 6.8, true, color.muted);
+      text(generatedDateLabel(), x + 12, y + 18, 8.5, true, color.ink);
+      text('Asia/Calcutta', x + 12, y + 7, 7.4, false, color.muted);
     };
     const drawTemplateTitle = (heading: string, subtitle?: string, generated = false) => {
       if (pageHasContent) {
         startPage();
       }
 
-      text(heading, marginX, pageHeight - 70, 28, true, color.title);
+      text(heading, marginX, pageHeight - 62, 25, true, color.title);
 
       if (subtitle) {
-        text(subtitle, marginX, pageHeight - 94, 10, false, color.muted);
+        text(subtitle, marginX, pageHeight - 82, 9.2, false, color.muted);
       }
 
       if (generated) {
         drawGeneratedCard();
       }
 
-      cursorY = pageHeight - (generated ? 150 : 128);
+      cursorY = pageHeight - (generated ? 118 : 102);
 
       if (heading === 'Overall Report') {
         drawSummaryCard();
@@ -1184,23 +1184,41 @@ export class TabsPage implements OnDestroy {
       };
     };
     const tableColumnWidths = (columns: string[]) => {
+      const normalizedColumns = columns.map((column) => column.toLowerCase());
+
+      if (columns.length === 3 && normalizedColumns.includes('quantity') && normalizedColumns.includes('unit')) {
+        return [contentWidth - 150, 86, 64];
+      }
+
+      if (columns.length === 4 && normalizedColumns.includes('stock')) {
+        return [contentWidth - 222, 82, 64, 76];
+      }
+
+      if (columns.length === 4 && normalizedColumns.includes('customer')) {
+        return [150, contentWidth - 294, 86, 58];
+      }
+
+      if (columns.length === 6 && normalizedColumns.includes('#')) {
+        return [24, 136, 136, 84, 72, 58];
+      }
+
       const widths: number[] = columns.map((column) => {
         const normalized = column.toLowerCase();
 
         if (normalized === '#') {
-          return 26;
+          return 24;
         }
 
         if (normalized.includes('quantity')) {
-          return 72;
+          return 82;
         }
 
         if (normalized === 'unit') {
-          return 92;
+          return 64;
         }
 
         if (normalized === 'stock') {
-          return 86;
+          return 76;
         }
 
         if (normalized.includes('customer')) {
@@ -1239,79 +1257,108 @@ export class TabsPage implements OnDestroy {
       }
 
       if (block.heading === 'Overall Report') {
-        drawTemplateTitle(block.heading, block.subtitle);
+        ensureSpace(88);
+        rect(marginX, cursorY - 20, contentWidth, 20, color.paleGray, color.border);
+        text(block.heading.toUpperCase(), marginX + 8, cursorY - 13, 9.6, true, color.title);
+        cursorY -= 24;
+
+        if (block.subtitle) {
+          text(block.subtitle, marginX + 8, cursorY - 2, 8.2, false, color.muted);
+          cursorY -= 16;
+        }
+
+        drawSummaryCard();
+        pageHasContent = true;
         return;
       }
 
-      ensureSpace(block.subtitle ? 50 : 34);
-      text(block.heading, marginX, cursorY, 18, true, color.title);
-      cursorY -= 18;
+      ensureSpace(block.subtitle ? 38 : 26);
+      rect(marginX, cursorY - 18, contentWidth, 18, color.paleGray, color.border);
+      text(block.heading.toUpperCase(), marginX + 8, cursorY - 12, 8.4, true, color.title);
+      cursorY -= 22;
 
       if (block.subtitle) {
-        text(block.subtitle, marginX, cursorY, 8.5, false, color.muted);
-        cursorY -= 16;
+        text(block.subtitle, marginX + 8, cursorY - 2, 8.2, false, color.muted);
+        cursorY -= 14;
       }
 
-      cursorY -= 8;
       pageHasContent = true;
     };
     const drawStructuredTable = (block: ReportTableBlock) => {
       const widths = tableColumnWidths(block.columns);
+      const rowFontSize = 7.2;
+      const headerHeight = 15;
+      const lineHeight = 8.4;
+      const rowPaddingY = 5;
+      const wrappedRows = block.rows.map((row) => {
+        const cellLines = row.map((cell, index) => {
+          const limit = Math.max(5, Math.floor(((widths[index] || 80) - 12) / (rowFontSize * 0.52)));
+          return wrap(cell || '-', limit).slice(0, 2);
+        });
+        const rowHeight = Math.max(18, rowPaddingY * 2 + Math.max(...cellLines.map((lines) => lines.length), 1) * lineHeight);
+
+        return { cellLines, rowHeight };
+      });
       const drawColumnHeader = () => {
         let x = marginX;
 
-        rect(marginX, cursorY - 2, contentWidth, 18, color.blue);
+        rect(marginX, cursorY - headerHeight, contentWidth, headerHeight, color.blue);
         block.columns.forEach((column, index) => {
-          alignedText(column, x, cursorY + 3, widths[index], 6.5, true, color.white, columnAlignment(column));
+          alignedText(column, x, cursorY - 10, widths[index], 6.2, true, color.white, columnAlignment(column));
           x += widths[index];
         });
-        cursorY -= 20;
+        cursorY -= headerHeight;
+      };
+      const drawContinuationTitle = () => {
+        if (!block.heading) {
+          return;
+        }
+
+        text(`${block.heading} (continued)`, marginX, cursorY - 8, 8.6, true, color.title);
+        cursorY -= 14;
       };
 
-      ensureSpace(48);
+      const firstRowHeight = wrappedRows[0]?.rowHeight || 18;
+      ensureSpace((block.heading ? 17 : 0) + (block.eyebrow ? 16 : 0) + headerHeight + firstRowHeight + 8);
 
       if (block.heading) {
-        text(block.heading, marginX, cursorY, 12, true, color.title);
+        text(block.heading, marginX, cursorY - 8, 9.6, true, color.title);
 
         if (block.totals?.length) {
           const totals = `UNIT TOTALS  ${block.totals.join('   ')}`;
-          const fitsInline = textWidth(block.heading, 12, true) + textWidth(totals, 7.2, true) < contentWidth - 18;
+          const fitsInline = textWidth(block.heading, 9.6, true) + textWidth(totals, 6.6, true) < contentWidth - 18;
 
           if (fitsInline) {
-            rightText(totals, pageWidth - marginX, cursorY, 7.2, true, color.muted);
+            rightText(totals, pageWidth - marginX, cursorY - 8, 6.6, true, color.muted);
           } else {
             wrap(totals, 58).slice(0, 2).forEach((totalLine, lineIndex) => {
-              rightText(totalLine, pageWidth - marginX, cursorY - 11 - lineIndex * 9, 7.2, true, color.muted);
+              rightText(totalLine, pageWidth - marginX, cursorY - 8 - lineIndex * 8, 6.6, true, color.muted);
             });
-            cursorY -= 12;
+            cursorY -= 8;
           }
         }
 
-        cursorY -= 18;
+        cursorY -= 14;
       }
 
       if (block.eyebrow) {
-        rect(marginX, cursorY - 2, contentWidth, 18, color.paleBlue, color.border);
-        text(block.eyebrow.toUpperCase(), marginX + 8, cursorY + 3, 7.4, true, color.ink);
-        cursorY -= 22;
+        rect(marginX, cursorY - 14, contentWidth, 14, color.paleBlue, color.border);
+        text(block.eyebrow.toUpperCase(), marginX + 8, cursorY - 9, 6.8, true, color.ink);
+        cursorY -= 14;
       }
 
       drawColumnHeader();
 
-      block.rows.forEach((row, rowIndex) => {
-        const cellLines = row.map((cell, index) => {
-          const limit = Math.max(5, Math.floor((widths[index] || 80) / 4.8));
-          return wrap(cell || '-', limit).slice(0, 3);
-        });
-        const rowHeight = Math.max(23, 10 + Math.max(...cellLines.map((lines) => lines.length), 1) * 10);
-
+      wrappedRows.forEach(({ cellLines, rowHeight }, rowIndex) => {
         if (cursorY - rowHeight < bottomMargin) {
           startPage();
+          drawContinuationTitle();
           drawColumnHeader();
         }
 
+        const rowTop = cursorY;
         if (rowIndex % 2 === 0) {
-          rect(marginX, cursorY - rowHeight + 9, contentWidth, rowHeight, color.paleGray);
+          rect(marginX, rowTop - rowHeight, contentWidth, rowHeight, color.paleGray);
         }
 
         let x = marginX;
@@ -1321,16 +1368,19 @@ export class TabsPage implements OnDestroy {
           const fill = column.toLowerCase() === 'stock' ? color.muted : color.ink;
           lines.forEach((wrapped, lineIndex) => {
             const isPrimary = columnIndex === 0 && lineIndex === 0;
-            alignedText(wrapped, x, cursorY - 2 - lineIndex * 10, widths[columnIndex], 7.7, isPrimary, fill, align);
+            alignedText(wrapped, x, rowTop - rowPaddingY - 7 - lineIndex * lineHeight, widths[columnIndex], rowFontSize, isPrimary, fill, align);
           });
+          if (columnIndex > 0) {
+            line(x, rowTop, x, rowTop - rowHeight, color.border);
+          }
           x += widths[columnIndex];
         });
-        line(marginX, cursorY - rowHeight + 7, pageWidth - marginX, cursorY - rowHeight + 7, color.border);
+        line(marginX, rowTop - rowHeight, pageWidth - marginX, rowTop - rowHeight, color.border);
         cursorY -= rowHeight;
         pageHasContent = true;
       });
 
-      cursorY -= 12;
+      cursorY -= 7;
       pageHasContent = true;
     };
     const drawReportBlock = (block: ReportBlock) => {
