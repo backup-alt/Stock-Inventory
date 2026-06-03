@@ -63,6 +63,11 @@ export class Tab1Page extends DateRangePageBase implements OnInit {
       return;
     }
 
+    if (label.includes('stock entries')) {
+      this.navigateTo('recent-entries');
+      return;
+    }
+
     if (label.includes('deliver')) {
       this.navigateTo('production-log');
       return;
