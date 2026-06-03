@@ -1061,14 +1061,40 @@ export class TabsPage implements OnDestroy {
       addFill(fill);
       commands.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x} ${y} Td (${this.escapePdfText(value)}) Tj ET`);
     };
+    const textWidth = (value: string, size = 10, bold = false) =>
+      this.escapePdfText(value).length * size * (bold ? 0.58 : 0.52);
+    const alignedText = (
+      value: string,
+      x: number,
+      y: number,
+      width: number,
+      size = 10,
+      bold = false,
+      fill = color.ink,
+      align: 'left' | 'center' | 'right' = 'left'
+    ) => {
+      const padding = 6;
+      let textX = x + padding;
+
+      if (align === 'right') {
+        textX = x + width - padding - textWidth(value, size, bold);
+      } else if (align === 'center') {
+        textX = x + (width - textWidth(value, size, bold)) / 2;
+      }
+
+      text(value, Math.max(x + padding, textX), y, size, bold, fill);
+    };
+    const rightText = (value: string, rightX: number, y: number, size = 10, bold = false, fill = color.ink) => {
+      text(value, rightX - textWidth(value, size, bold), y, size, bold, fill);
+    };
     const line = (x1: number, y1: number, x2: number, y2: number, stroke = color.border) => {
       addStroke(stroke);
       commands.push(`0.6 w ${x1} ${y1} m ${x2} ${y2} l S`);
     };
     const wrap = (value: string, limit: number) => this.wrapText(value, limit);
     const drawSummaryCard = () => {
-      const periodLines = wrap(payload.period || this.currentPeriodLabel(), 34).slice(0, 2);
-      const cardWidth = 250;
+      const periodLines = wrap(payload.period || this.currentPeriodLabel(), 64).slice(0, 2);
+      const cardWidth = contentWidth;
       const cardHeight = periodLines.length > 1 ? 46 : 42;
 
       rect(marginX, cursorY - cardHeight, cardWidth, cardHeight, color.paleGray, color.border);
@@ -1098,7 +1124,7 @@ export class TabsPage implements OnDestroy {
       const cardWidth = 175;
       const cardHeight = 58;
       const x = pageWidth - marginX - cardWidth;
-      const y = pageHeight - 105;
+      const y = pageHeight - 108;
 
       rect(x, y, cardWidth, cardHeight, color.paleGray, color.border);
       text('GENERATED DATE/TIME', x + 12, y + 39, 7, true, color.muted);
@@ -1193,6 +1219,19 @@ export class TabsPage implements OnDestroy {
 
       return widths.map((width) => width || flexibleWidth);
     };
+    const columnAlignment = (column: string): 'left' | 'center' | 'right' => {
+      const normalized = column.toLowerCase();
+
+      if (normalized.includes('quantity')) {
+        return 'right';
+      }
+
+      if (normalized === '#' || normalized === 'unit' || normalized === 'stock') {
+        return 'center';
+      }
+
+      return 'left';
+    };
     const drawHeadingBlock = (block: ReportHeadingBlock) => {
       if (block.heading === 'Stock Report') {
         drawTemplateTitle(block.heading, block.subtitle, true);
@@ -1223,7 +1262,7 @@ export class TabsPage implements OnDestroy {
 
         rect(marginX, cursorY - 2, contentWidth, 18, color.blue);
         block.columns.forEach((column, index) => {
-          text(column, x + 6, cursorY + 3, 6.5, true, color.white);
+          alignedText(column, x, cursorY + 3, widths[index], 6.5, true, color.white, columnAlignment(column));
           x += widths[index];
         });
         cursorY -= 20;
@@ -1236,7 +1275,16 @@ export class TabsPage implements OnDestroy {
 
         if (block.totals?.length) {
           const totals = `UNIT TOTALS  ${block.totals.join('   ')}`;
-          text(totals, marginX + 285, cursorY, 7.2, true, color.muted);
+          const fitsInline = textWidth(block.heading, 12, true) + textWidth(totals, 7.2, true) < contentWidth - 18;
+
+          if (fitsInline) {
+            rightText(totals, pageWidth - marginX, cursorY, 7.2, true, color.muted);
+          } else {
+            wrap(totals, 58).slice(0, 2).forEach((totalLine, lineIndex) => {
+              rightText(totalLine, pageWidth - marginX, cursorY - 11 - lineIndex * 9, 7.2, true, color.muted);
+            });
+            cursorY -= 12;
+          }
         }
 
         cursorY -= 18;
@@ -1268,9 +1316,12 @@ export class TabsPage implements OnDestroy {
 
         let x = marginX;
         cellLines.forEach((lines, columnIndex) => {
+          const column = block.columns[columnIndex] || '';
+          const align = columnAlignment(column);
+          const fill = column.toLowerCase() === 'stock' ? color.muted : color.ink;
           lines.forEach((wrapped, lineIndex) => {
             const isPrimary = columnIndex === 0 && lineIndex === 0;
-            text(wrapped, x + 6, cursorY - 2 - lineIndex * 10, 7.7, isPrimary, columnIndex === row.length - 1 ? color.muted : color.ink);
+            alignedText(wrapped, x, cursorY - 2 - lineIndex * 10, widths[columnIndex], 7.7, isPrimary, fill, align);
           });
           x += widths[columnIndex];
         });
