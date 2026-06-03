@@ -79,7 +79,13 @@ export abstract class DateRangePageBase {
   }
 
   protected initializeDateFilter() {
+    this.syncFromActiveSelection();
+    this.syncActiveSelection();
+  }
+
+  protected syncFromActiveSelection(): boolean {
     const activeSelection = this.dateFilter.getActiveSelection();
+    const previousSelection = this.currentSelectionKey();
 
     this.activePeriod = activeSelection.period;
     this.selectedDateIso = activeSelection.date;
@@ -88,9 +94,10 @@ export abstract class DateRangePageBase {
     this.selectedRangeEndIso = activeSelection.range.endIso;
     this.pendingRangeStartIso = activeSelection.range.startIso;
     this.pendingRangeEndIso = activeSelection.range.endIso;
-    this.syncActiveSelection();
     this.refreshCalendar();
     this.updateCurrentDate();
+
+    return previousSelection !== this.currentSelectionKey();
   }
 
   protected dateQuery() {
@@ -137,6 +144,15 @@ export abstract class DateRangePageBase {
       startIso: this.selectedRangeStartIso,
       endIso: this.selectedRangeEndIso,
     };
+  }
+
+  private currentSelectionKey(): string {
+    return [
+      this.activePeriod,
+      this.selectedDateIso,
+      this.selectedRangeStartIso,
+      this.selectedRangeEndIso,
+    ].join('|');
   }
 
   private pendingRange(): DateRangeSelection {

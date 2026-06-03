@@ -232,6 +232,10 @@ export class ProductInfoPage implements OnInit, OnDestroy {
       return '/tabs/inventory/consumables';
     }
 
+    if (normalizedTitle.includes('product inventory') || normalizedTitle.includes('finished goods')) {
+      return '/tabs/inventory/product-inventory';
+    }
+
     if (normalizedTitle.includes('crystalline') || normalizedTitle.includes('crystal')) {
       return '/tabs/inventory/crystalline';
     }

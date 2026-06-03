@@ -176,7 +176,7 @@
       </div>
 
       <!-- Performance Analytics -->
-      <section class="bg-surface rounded-lg border border-outline-variant shadow-soft overflow-hidden mt-3">
+      <section *ngIf="showPerformanceAnalytics" class="bg-surface rounded-lg border border-outline-variant shadow-soft overflow-hidden mt-3">
         <div class="px-3 py-2 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
           <h3 class="font-label-bold text-label-bold uppercase tracking-wider text-on-surface-variant">Performance Analytics</h3>
           <span class="material-symbols-outlined text-[20px] text-on-surface-variant">insights</span>

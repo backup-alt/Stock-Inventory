@@ -31,6 +31,12 @@ export class Tab2Page extends DateRangePageBase implements OnInit {
     this.loadData();
   }
 
+  ionViewWillEnter() {
+    if (this.syncFromActiveSelection() && this.data) {
+      this.reloadForDateChange();
+    }
+  }
+
   loadData(refresher?: any) {
     if (!refresher && !this.data) {
       this.isLoading = true;
@@ -67,6 +73,10 @@ export class Tab2Page extends DateRangePageBase implements OnInit {
     this.router.navigate(['/tabs/production-log']);
   }
 
+  get showPerformanceAnalytics(): boolean {
+    return this.activePeriod !== 'daily' && this.analyticsCharts.length > 0;
+  }
+
   private applyDemoPeriod() {
     if (!this.baseData) {
       return;
@@ -95,7 +105,12 @@ export class Tab2Page extends DateRangePageBase implements OnInit {
     setTimeout(() => refresher.target?.complete(), 500);
   }
 
-  protected onDateFilterChanged(): void {
+  private reloadForDateChange() {
+    this.isLoading = true;
     this.loadData();
+  }
+
+  protected onDateFilterChanged(): void {
+    this.reloadForDateChange();
   }
 }

@@ -35,7 +35,7 @@
     <ng-container *ngIf="hasError && !isLoading">
       <div class="flex flex-col items-center justify-center py-20 text-center">
         <span class="material-symbols-outlined text-6xl text-outline-variant mb-4">error_outline</span>
-        <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Unable to load Crystalline Inventory</h2>
+        <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Unable to load {{errorTitle}}</h2>
         <p class="font-body-md text-body-md text-on-surface-variant mb-6">Please try again later.</p>
         <button class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-label-bold text-label-bold flex items-center gap-2"
                 (click)="loadData()">

@@ -142,6 +142,10 @@ export class DataService {
     return this.inventoryTable('crystalline', filter);
   }
 
+  getProductInventory(filter?: DateFilterParams): Observable<InventoryTableData> {
+    return this.inventoryTable('product-inventory', filter);
+  }
+
   getProductionLog(filter?: DateFilterParams): Observable<InventoryTableData> {
     const reportFilter = filter ?? this.defaultFilter('monthly');
 
@@ -234,7 +238,7 @@ function dashboardData(stock: any, summary: any, filter: DateFilterParams): Dash
         label: ordersKpiLabel(filter.period),
         value: countRows(reports.orderPlaced),
         icon: 'shopping_cart',
-        footer: `${countRows(reports.stockEntry)} stock entries`,
+        footer: `${countRows(reports.orderPlaced)} ${countRows(reports.orderPlaced) === 1 ? 'order' : 'orders'} in selected range`,
       },
       {
         label: 'Deliveries Out',
@@ -243,10 +247,10 @@ function dashboardData(stock: any, summary: any, filter: DateFilterParams): Dash
         footer: 'Production report rows',
       },
       {
-        label: 'Pending Entry',
-        value: lowStock.length,
+        label: 'Stock Entries',
+        value: countRows(reports.stockEntry),
         icon: 'input',
-        footer: 'Low or zero stock items',
+        footer: 'Incoming stock rows',
       },
     ] as KpiCard[],
     criticalStock: lowStock.slice(0, 4),
@@ -438,6 +442,10 @@ function rowsForSlug(stock: any, slug: string): InventoryRow[] {
     return crystallineRows(stock);
   }
 
+  if (slug === 'product-inventory') {
+    return finishedGoodsRows(stock);
+  }
+
   return [];
 }
 
@@ -484,15 +492,16 @@ function inventoryItem(item: InventoryRow): InventoryTableItem {
 }
 
 function recentEntriesReport(title: string, description: string, rows: any[], filter: DateFilterParams): InventoryTableData {
-  const validDatedRows = rows.filter(hasRecentEntryDate);
-  const sourceRows = validDatedRows.length > 0
-    ? validDatedRows.filter((row) => dateMatchesFilter(recentEntryDateValue(row), filter))
-    : rows.filter(hasReportProduct);
+  const datedRows = rows.filter(hasRecentEntryDate);
+  const hasBackendFilteredRows = rows.length > 0;
+  const sourceRows = hasBackendFilteredRows
+    ? rows.filter(hasReportProduct)
+    : datedRows.filter((row) => dateMatchesFilter(recentEntryDateValue(row), filter));
 
-  const items = rows
-    .filter((row) => sourceRows.includes(row))
-    .map((row) => {
+  const items = sourceRows
+    .map((row, index) => {
       const quantity = rowQuantity(row);
+      const createdAt = recentEntryDateValue(row) || undefined;
 
       return {
         productGroup: cleanText(row.productGroup || row.productName || row.productBrand),
@@ -502,10 +511,21 @@ function recentEntriesReport(title: string, description: string, rows: any[], fi
         quantity,
         unit: shortUnit(row.unit || row.unitName),
         status: stockStatus(quantity),
-        createdAt: recentEntryDateValue(row) || undefined,
+        createdAt,
+        sourceIndex: index,
       };
     })
-    .sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime());
+    .sort((left, right) => {
+      const rightTime = new Date(right.createdAt || 0).getTime();
+      const leftTime = new Date(left.createdAt || 0).getTime();
+
+      if (rightTime || leftTime) {
+        return rightTime - leftTime;
+      }
+
+      return left.sourceIndex - right.sourceIndex;
+    })
+    .map(({ sourceIndex: _sourceIndex, ...item }) => item);
 
   return {
     title,
@@ -850,7 +870,23 @@ function hasRecentEntryDate(row: any): boolean {
 }
 
 function recentEntryDateValue(row: any): string | null {
-  return row.createdAt || row.entryDate || row.date || row.documentDate || row.reportDate || row.updatedAt || null;
+  return row.createdAt ||
+    row.created_at ||
+    row.timestamp ||
+    row.timeStamp ||
+    row.dateTime ||
+    row.datetime ||
+    row.orderDate ||
+    row.orderPlacedAt ||
+    row.stockEntryDate ||
+    row.entryDate ||
+    row.transactionDate ||
+    row.documentDate ||
+    row.reportDate ||
+    row.date ||
+    row.updatedAt ||
+    row.updated_at ||
+    null;
 }
 
 function rowDate(row: any): string | null {
@@ -977,7 +1013,8 @@ function categoryTitle(slug: string): string {
     'packaging-rolls': 'Packaging Rolls Inventory',
     'packaging-bags': 'Packaging Bags Inventory',
     consumables: 'Consumables Inventory',
-    crystalline: 'Product Inventory',
+    crystalline: 'Crystalline Inventory',
+    'product-inventory': 'Product Inventory',
   };
 
   return titles[slug] || titleFromSlug(slug);

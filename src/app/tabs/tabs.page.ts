@@ -3,8 +3,7 @@ import { IonTabs } from '@ionic/angular';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter, firstValueFrom } from 'rxjs';
 import { DataService, DateFilterParams } from '../core/services/data.service';
-import { DateFilterService } from '../core/services/date-filter.service';
-import { DatePeriod } from '../core/models/inventory.models';
+import { ActiveDateSelection, DateFilterService } from '../core/services/date-filter.service';
 
 interface NavItem {
   icon: string;
@@ -368,15 +367,16 @@ export class TabsPage implements OnDestroy {
   }
 
   private async createCombinedReportPayload(): Promise<ReportPayload> {
-    const reportFilter = this.currentReportFilter();
+    const activeSelection = this.dateFilter.getActiveSelection();
+    const reportFilter = this.currentReportFilter(activeSelection);
     const stockFilter = reportFilter;
     const summaryFilter = reportFilter;
     const [stockReport, summaryReport] = await Promise.all([
       this.safeReportData(firstValueFrom(this.dataService.getRawStockReport(stockFilter)), { data: {} }),
       this.safeReportData(firstValueFrom(this.dataService.getRawSummaryReport(summaryFilter)), { data: { reports: {} } }),
     ]);
-    const period = this.formatReportPeriodRange(summaryFilter);
-    const reportSubtitle = this.formatReportPeriodSubtitle(summaryFilter);
+    const period = this.formatSelectionPeriodRange(activeSelection);
+    const reportSubtitle = this.formatSelectionPeriodSubtitle(activeSelection);
     const blocks: ReportBlock[] = [
       { type: 'heading', heading: 'Stock Report' },
       ...this.stockReportBlocks(stockReport),
@@ -422,21 +422,30 @@ export class TabsPage implements OnDestroy {
       { type: 'heading', heading: 'Finished Goods' },
     ];
 
-    (stock?.data?.finishedGoods || []).forEach((plant: any) => {
-      (plant.groups || []).forEach((group: any) => {
-        const products = group.products || [];
-        blocks.push({
-          type: 'table',
-          heading: this.cleanReportText(plant.plantName || 'Finished Goods'),
-          eyebrow: this.cleanReportText(group.productGroup || 'Products'),
-          totals: this.unitTotals(products),
-          columns: ['PRODUCT BRAND', 'QUANTITY', 'UNIT'],
-          rows: products.map((product: any) => [
-            this.cleanReportText(product.productBrand || product.productGroup),
-            this.formatReportQuantity(product.qty),
-            this.displayReportUnit(product.unitName),
-          ]),
-        });
+    const finishedGoodsPlants = [...(stock?.data?.finishedGoods || [])]
+      .sort((left: any, right: any) => this.reportUnitSort(this.reportUnitLabel(left?.plantName)) - this.reportUnitSort(this.reportUnitLabel(right?.plantName)));
+
+    finishedGoodsPlants.forEach((plant: any) => {
+      const products = ([] as any[]).concat(...[...(plant.groups || [])]
+        .sort((left: any, right: any) => this.firstReportText(left?.productGroup, 'Products').localeCompare(this.firstReportText(right?.productGroup, 'Products')))
+        .map((group: any) => (group.products || []).map((product: any) => ({
+          ...product,
+          productGroup: this.firstReportText(group.productGroup, product.productGroup, 'Products'),
+        }))))
+        .sort((left: any, right: any) => this.compareReportProducts(left, right));
+
+      blocks.push({
+        type: 'table',
+        heading: this.reportUnitLabel(plant.plantName || 'Finished Goods'),
+        eyebrow: 'Finished Goods',
+        totals: this.unitTotals(products),
+        columns: ['PRODUCT GROUP', 'PRODUCT', 'QUANTITY', 'UNIT'],
+        rows: products.map((product: any) => [
+          this.firstReportText(product.productGroup, 'Products'),
+          this.firstReportText(product.productBrand, product.productName, product.productCode),
+          this.formatReportQuantity(product.qty),
+          this.displayReportUnit(product.unitName),
+        ]),
       });
     });
 
@@ -468,7 +477,7 @@ export class TabsPage implements OnDestroy {
       ...this.groupedSummaryTables(
         'Production Output',
         this.reportRows(reports, 'production', 'productionOutput', 'productionReport'),
-        'PRODUCT BRAND'
+        'PRODUCT'
       ),
       ...this.flatSummaryTables(
         'Inventory Used Consumed',
@@ -490,28 +499,18 @@ export class TabsPage implements OnDestroy {
 
   private groupedSummaryTables(sectionHeading: string, rows: any[], productColumn: string): ReportBlock[] {
     const blocks: ReportBlock[] = [{ type: 'heading', heading: sectionHeading }];
-    const groupedRows = new Map<string, any[]>();
+    this.rowsByReportUnit(rows).forEach(([unitName, unitRows]) => {
+      const sortedRows = [...unitRows].sort((left, right) => this.compareReportProducts(left, right));
 
-    rows.forEach((row) => {
-      const key = [
-        this.cleanReportText(row.plantName || 'N/A'),
-        this.cleanReportText(row.productGroup || row.productName || 'Products'),
-      ].join('|');
-      const group = groupedRows.get(key) || [];
-      group.push(row);
-      groupedRows.set(key, group);
-    });
-
-    groupedRows.forEach((groupRows, key) => {
-      const [plantName, productGroup] = key.split('|');
       blocks.push({
         type: 'table',
-        heading: plantName === 'N/A' ? productGroup : plantName,
-        eyebrow: productGroup,
-        totals: this.unitTotals(groupRows),
-        columns: [productColumn, 'QUANTITY', 'UNIT'],
-        rows: groupRows.map((row) => [
-          this.cleanReportText(row.productBrand || row.productGroup || row.productName),
+        heading: unitName,
+        eyebrow: sectionHeading,
+        totals: this.unitTotals(sortedRows),
+        columns: ['PRODUCT GROUP', productColumn, 'QUANTITY', 'UNIT'],
+        rows: sortedRows.map((row) => [
+          this.firstReportText(row.productGroup, row.productName, 'Products'),
+          this.reportProductLabel(row),
           this.formatReportQuantity(this.reportQuantity(row)),
           this.displayReportUnit(row.unit || row.unitName),
         ]),
@@ -526,38 +525,32 @@ export class TabsPage implements OnDestroy {
       return [];
     }
 
-    const groups = new Map<string, any[]>();
-    rows.forEach((row) => {
-      const key = this.cleanReportText(row.productName || sectionHeading);
-      const group = groups.get(key) || [];
-      group.push(row);
-      groups.set(key, group);
-    });
-
     const blocks: ReportBlock[] = [{ type: 'heading', heading: sectionHeading }];
-    groups.forEach((groupRows, productName) => {
+    this.rowsByReportUnit(rows).forEach(([unitName, unitRows]) => {
+      const sortedRows = [...unitRows].sort((left, right) => this.compareReportProducts(left, right));
       const columns = numbered
-        ? ['#', 'PRODUCT NAME', 'PRODUCT GROUP', 'BRAND', 'QUANTITY', 'UNIT']
-        : ['PRODUCT GROUP', 'QUANTITY', 'UNIT'];
-      const tableRows = groupRows.map((row, index) => numbered
+        ? ['#', 'PRODUCT NAME', 'PRODUCT GROUP', 'QUANTITY', 'UNIT']
+        : ['PRODUCT NAME', 'PRODUCT GROUP', 'QUANTITY', 'UNIT'];
+      const tableRows = sortedRows.map((row, index) => numbered
         ? [
             String(index + 1),
-            this.cleanReportText(row.productName || productName),
-            this.cleanReportText(row.productGroup),
-            this.cleanReportText(row.productBrand || '-'),
+            this.firstReportText(row.productName, sectionHeading),
+            this.firstReportText(row.productGroup, row.productBrand, row.itemName),
             this.formatReportQuantity(this.reportQuantity(row)),
             this.displayReportUnit(row.unit || row.unitName),
           ]
         : [
-            this.cleanReportText(row.productGroup || row.productBrand || row.productName),
+            this.firstReportText(row.productName, sectionHeading),
+            this.firstReportText(row.productGroup, row.productBrand, row.itemName, row.productCode),
             this.formatReportQuantity(this.reportQuantity(row)),
             this.displayReportUnit(row.unit || row.unitName),
           ]);
 
       blocks.push({
         type: 'table',
-        heading: productName,
-        totals: this.unitTotals(groupRows),
+        heading: unitName === 'General / Unassigned' ? sectionHeading : unitName,
+        eyebrow: unitName === 'General / Unassigned' ? undefined : sectionHeading,
+        totals: this.unitTotals(sortedRows),
         columns,
         rows: tableRows,
       });
@@ -571,21 +564,23 @@ export class TabsPage implements OnDestroy {
       return [];
     }
 
-    return [
-      { type: 'heading', heading: 'Orders Placed' },
-      {
+    const blocks: ReportBlock[] = [{ type: 'heading', heading: 'Orders Placed' }];
+
+    this.rowsByReportUnit(rows).forEach(([unitName, unitRows]) => {
+      blocks.push({
         type: 'table',
-        heading: 'Customer Orders',
-        totals: this.unitTotals(rows),
-        columns: ['CUSTOMER', 'PRODUCT', 'QUANTITY', 'UNIT'],
-        rows: rows.map((row) => [
-          this.cleanReportText(row.customerName || row.customer || row.partyName || row.name || 'Customer'),
-          this.cleanReportText(row.productBrand || row.productGroup || row.productName || row.itemName),
+        heading: unitName === 'General / Unassigned' ? 'Orders' : `Orders - ${unitName}`,
+        totals: this.unitTotals(unitRows),
+        columns: ['PRODUCT', 'QUANTITY', 'UNIT'],
+        rows: unitRows.map((row) => [
+          this.reportProductLabel(row),
           this.formatReportQuantity(this.reportQuantity(row)),
           this.displayReportUnit(row.unit || row.unitName),
         ]),
-      },
-    ];
+      });
+    });
+
+    return blocks;
   }
 
   private nonEmptyBlocks(blocks: ReportBlock[]): ReportBlock[] {
@@ -619,6 +614,72 @@ export class TabsPage implements OnDestroy {
     }
 
     return [];
+  }
+
+  private rowsByReportUnit(rows: any[]): Array<[string, any[]]> {
+    const groups = new Map<string, any[]>();
+
+    rows.forEach((row) => {
+      const unitName = this.reportUnitLabelFromRow(row);
+      const group = groups.get(unitName) || [];
+      group.push(row);
+      groups.set(unitName, group);
+    });
+
+    return Array.from(groups.entries()).sort(([left], [right]) => this.reportUnitSort(left) - this.reportUnitSort(right));
+  }
+
+  private reportUnitLabel(value: unknown): string {
+    const unitName = this.cleanReportText(value);
+    return unitName === 'N/A' ? 'General / Unassigned' : unitName;
+  }
+
+  private reportUnitLabelFromRow(row: any): string {
+    const plantName = this.reportUnitLabel(row?.plantName);
+
+    if (plantName !== 'General / Unassigned') {
+      return plantName;
+    }
+
+    return this.reportUnitLabelFromProductCode(row?.productCode);
+  }
+
+  private reportUnitLabelFromProductCode(value: unknown): string {
+    const productCode = this.cleanReportText(value);
+
+    if (productCode === 'N/A') {
+      return 'General / Unassigned';
+    }
+
+    const unitMarkerIndex = productCode.lastIndexOf('--');
+    const candidate = unitMarkerIndex >= 0
+      ? productCode.slice(unitMarkerIndex + 2).replace(/^-+|-+$/g, '').trim()
+      : '';
+
+    if (/unit\s*\d/i.test(candidate)) {
+      return this.cleanReportText(candidate);
+    }
+
+    const match = productCode.match(/unit\s*\d[^-]*/i);
+    return match ? this.cleanReportText(match[0]) : 'General / Unassigned';
+  }
+
+  private reportUnitSort(unitName: string): number {
+    const normalized = unitName.toLowerCase();
+
+    if (normalized.includes('unit 1')) {
+      return 1;
+    }
+
+    if (normalized.includes('unit 2')) {
+      return 2;
+    }
+
+    if (normalized.includes('general') || normalized.includes('unassigned')) {
+      return 99;
+    }
+
+    return 50;
   }
 
   private rawSaltStock(source: any): any {
@@ -655,7 +716,41 @@ export class TabsPage implements OnDestroy {
   }
 
   private cleanReportText(value: unknown): string {
-    return String(value ?? '').replace(/\s+/g, ' ').trim() || 'N/A';
+    const textValue = String(value ?? '').replace(/\s+/g, ' ').trim();
+    const normalized = textValue.toLowerCase();
+
+    if (!textValue || normalized === 'null' || normalized === 'undefined' || normalized === 'n/a' || normalized === 'na') {
+      return 'N/A';
+    }
+
+    return textValue;
+  }
+
+  private firstReportText(...values: unknown[]): string {
+    for (const value of values) {
+      const cleanValue = this.cleanReportText(value);
+      if (cleanValue !== 'N/A') {
+        return cleanValue;
+      }
+    }
+
+    return 'N/A';
+  }
+
+  private reportProductLabel(row: any): string {
+    return this.firstReportText(row?.productBrand, row?.productGroup, row?.productName, row?.itemName, row?.productCode);
+  }
+
+  private compareReportProducts(left: any, right: any): number {
+    const leftGroup = this.firstReportText(left?.productGroup, left?.productName, 'Products');
+    const rightGroup = this.firstReportText(right?.productGroup, right?.productName, 'Products');
+    const groupSort = leftGroup.localeCompare(rightGroup);
+
+    if (groupSort !== 0) {
+      return groupSort;
+    }
+
+    return this.reportProductLabel(left).localeCompare(this.reportProductLabel(right));
   }
 
   private formatReportQuantity(value: unknown): string {
@@ -700,6 +795,36 @@ export class TabsPage implements OnDestroy {
     }
 
     return 'Healthy';
+  }
+
+  private formatSelectionPeriodRange(selection: ActiveDateSelection): string {
+    const start = this.dateFilter.parseInputDate(selection.range.startIso);
+    const end = this.dateFilter.parseInputDate(selection.range.endIso);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return this.formatReportPeriodRange(this.currentReportFilter(selection));
+    }
+
+    if (selection.range.startIso === selection.range.endIso) {
+      return this.formatReportDate(start);
+    }
+
+    return `${this.formatReportDate(start)} - ${this.formatReportDate(end)}`;
+  }
+
+  private formatSelectionPeriodSubtitle(selection: ActiveDateSelection): string {
+    const start = this.dateFilter.parseInputDate(selection.range.startIso);
+    const end = this.dateFilter.parseInputDate(selection.range.endIso);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return this.formatReportPeriodSubtitle(this.currentReportFilter(selection));
+    }
+
+    if (selection.range.startIso === selection.range.endIso) {
+      return this.formatReportLongDate(start);
+    }
+
+    return `${this.formatReportLongDate(start)} - ${this.formatReportLongDate(end)}`;
   }
 
   private formatReportPeriodRange(filter: DateFilterParams): string {
@@ -783,13 +908,17 @@ export class TabsPage implements OnDestroy {
     }
   }
 
-  private currentReportFilter(periodOverride?: DatePeriod): DateFilterParams {
-    return this.dateFilter.buildActiveFilter(periodOverride);
+  private currentReportFilter(activeSelection: ActiveDateSelection = this.dateFilter.getActiveSelection()): DateFilterParams {
+    const isCustomRange = activeSelection.period === 'custom';
+    const apiPeriod = isCustomRange ? 'weekly' : activeSelection.period;
+    const filter = this.dateFilter.buildFilter(apiPeriod, activeSelection.date, activeSelection.range);
+
+    return isCustomRange ? { ...filter, rangeType: 'custom' as const } : filter;
   }
 
   private currentPeriodLabel(): string {
-    const period = this.dateFilter.getCurrentPeriod();
-    return this.dateFilter.getFormattedDate(period, new Date());
+    const activeSelection = this.dateFilter.getActiveSelection();
+    return this.dateFilter.getFormattedDate(activeSelection.period, activeSelection.date, activeSelection.range);
   }
 
   private reportTemplateForRoute(): 'summary' | 'inventory' {
@@ -1036,6 +1165,7 @@ export class TabsPage implements OnDestroy {
     let commands: string[] = [];
     let cursorY = 0;
     let pageHasContent = false;
+    let summaryCardDrawn = false;
 
     const color = {
       ink: '0.16 0.2 0.22',
@@ -1103,6 +1233,7 @@ export class TabsPage implements OnDestroy {
         text(periodLine, marginX + 10, cursorY - 26 - lineIndex * 10, 9.2, true, color.title);
       });
       cursorY -= cardHeight + 14;
+      summaryCardDrawn = true;
     };
     const startPage = () => {
       commands = [];
@@ -1148,7 +1279,7 @@ export class TabsPage implements OnDestroy {
 
       cursorY = pageHeight - (generated ? 118 : 102);
 
-      if (heading === 'Overall Report') {
+      if (payload.period) {
         drawSummaryCard();
       }
 
@@ -1194,12 +1325,20 @@ export class TabsPage implements OnDestroy {
         return [contentWidth - 222, 82, 64, 76];
       }
 
+      if (columns.length === 4 && normalizedColumns.includes('product group') && normalizedColumns.some((column) => column.includes('product'))) {
+        return [148, contentWidth - 294, 82, 64];
+      }
+
       if (columns.length === 4 && normalizedColumns.includes('customer')) {
         return [150, contentWidth - 294, 86, 58];
       }
 
       if (columns.length === 6 && normalizedColumns.includes('#')) {
         return [24, 136, 136, 84, 72, 58];
+      }
+
+      if (columns.length === 5 && normalizedColumns.includes('#')) {
+        return [24, 154, contentWidth - 324, 82, 64];
       }
 
       const widths: number[] = columns.map((column) => {
@@ -1257,17 +1396,17 @@ export class TabsPage implements OnDestroy {
       }
 
       if (block.heading === 'Overall Report') {
-        ensureSpace(88);
-        rect(marginX, cursorY - 20, contentWidth, 20, color.paleGray, color.border);
-        text(block.heading.toUpperCase(), marginX + 8, cursorY - 13, 9.6, true, color.title);
-        cursorY -= 24;
+        const periodLines = wrap(block.subtitle || payload.period || this.currentPeriodLabel(), 58).slice(0, 2);
+        const headerHeight = periodLines.length > 1 ? 48 : 38;
 
-        if (block.subtitle) {
-          text(block.subtitle, marginX + 8, cursorY - 2, 8.2, false, color.muted);
-          cursorY -= 16;
-        }
-
-        drawSummaryCard();
+        ensureSpace(headerHeight + 16);
+        rect(marginX, cursorY - headerHeight, contentWidth, headerHeight, color.paleGray, color.border);
+        text(block.heading.toUpperCase(), marginX + 10, cursorY - 14, 10.2, true, color.title);
+        text('REPORT PERIOD', marginX + 10, cursorY - 28, 6.5, true, color.muted);
+        periodLines.forEach((periodLine, lineIndex) => {
+          text(periodLine, marginX + 86, cursorY - 28 - lineIndex * 9, 8.1, lineIndex === 0, color.ink);
+        });
+        cursorY -= headerHeight + 12;
         pageHasContent = true;
         return;
       }
