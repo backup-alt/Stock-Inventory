@@ -3,8 +3,7 @@ import { IonTabs } from '@ionic/angular';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter, firstValueFrom } from 'rxjs';
 import { DataService, DateFilterParams } from '../core/services/data.service';
-import { DateFilterService } from '../core/services/date-filter.service';
-import { DatePeriod } from '../core/models/inventory.models';
+import { ActiveDateSelection, DateFilterService } from '../core/services/date-filter.service';
 
 interface NavItem {
   icon: string;
@@ -368,15 +367,16 @@ export class TabsPage implements OnDestroy {
   }
 
   private async createCombinedReportPayload(): Promise<ReportPayload> {
-    const reportFilter = this.currentReportFilter();
+    const activeSelection = this.dateFilter.getActiveSelection();
+    const reportFilter = this.currentReportFilter(activeSelection);
     const stockFilter = reportFilter;
     const summaryFilter = reportFilter;
     const [stockReport, summaryReport] = await Promise.all([
       this.safeReportData(firstValueFrom(this.dataService.getRawStockReport(stockFilter)), { data: {} }),
       this.safeReportData(firstValueFrom(this.dataService.getRawSummaryReport(summaryFilter)), { data: { reports: {} } }),
     ]);
-    const period = this.formatReportPeriodRange(summaryFilter);
-    const reportSubtitle = this.formatReportPeriodSubtitle(summaryFilter);
+    const period = this.formatSelectionPeriodRange(activeSelection);
+    const reportSubtitle = this.formatSelectionPeriodSubtitle(activeSelection);
     const blocks: ReportBlock[] = [
       { type: 'heading', heading: 'Stock Report' },
       ...this.stockReportBlocks(stockReport),
@@ -797,6 +797,36 @@ export class TabsPage implements OnDestroy {
     return 'Healthy';
   }
 
+  private formatSelectionPeriodRange(selection: ActiveDateSelection): string {
+    const start = this.dateFilter.parseInputDate(selection.range.startIso);
+    const end = this.dateFilter.parseInputDate(selection.range.endIso);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return this.formatReportPeriodRange(this.currentReportFilter(selection));
+    }
+
+    if (selection.range.startIso === selection.range.endIso) {
+      return this.formatReportDate(start);
+    }
+
+    return `${this.formatReportDate(start)} - ${this.formatReportDate(end)}`;
+  }
+
+  private formatSelectionPeriodSubtitle(selection: ActiveDateSelection): string {
+    const start = this.dateFilter.parseInputDate(selection.range.startIso);
+    const end = this.dateFilter.parseInputDate(selection.range.endIso);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return this.formatReportPeriodSubtitle(this.currentReportFilter(selection));
+    }
+
+    if (selection.range.startIso === selection.range.endIso) {
+      return this.formatReportLongDate(start);
+    }
+
+    return `${this.formatReportLongDate(start)} - ${this.formatReportLongDate(end)}`;
+  }
+
   private formatReportPeriodRange(filter: DateFilterParams): string {
     const start = filter.fromDate ? new Date(filter.fromDate) : null;
     const end = filter.toDate ? new Date(filter.toDate) : null;
@@ -878,13 +908,17 @@ export class TabsPage implements OnDestroy {
     }
   }
 
-  private currentReportFilter(periodOverride?: DatePeriod): DateFilterParams {
-    return this.dateFilter.buildActiveFilter(periodOverride);
+  private currentReportFilter(activeSelection: ActiveDateSelection = this.dateFilter.getActiveSelection()): DateFilterParams {
+    const isCustomRange = activeSelection.period === 'custom';
+    const apiPeriod = isCustomRange ? 'weekly' : activeSelection.period;
+    const filter = this.dateFilter.buildFilter(apiPeriod, activeSelection.date, activeSelection.range);
+
+    return isCustomRange ? { ...filter, rangeType: 'custom' as const } : filter;
   }
 
   private currentPeriodLabel(): string {
-    const period = this.dateFilter.getCurrentPeriod();
-    return this.dateFilter.getFormattedDate(period, new Date());
+    const activeSelection = this.dateFilter.getActiveSelection();
+    return this.dateFilter.getFormattedDate(activeSelection.period, activeSelection.date, activeSelection.range);
   }
 
   private reportTemplateForRoute(): 'summary' | 'inventory' {
@@ -1131,6 +1165,7 @@ export class TabsPage implements OnDestroy {
     let commands: string[] = [];
     let cursorY = 0;
     let pageHasContent = false;
+    let summaryCardDrawn = false;
 
     const color = {
       ink: '0.16 0.2 0.22',
@@ -1198,6 +1233,7 @@ export class TabsPage implements OnDestroy {
         text(periodLine, marginX + 10, cursorY - 26 - lineIndex * 10, 9.2, true, color.title);
       });
       cursorY -= cardHeight + 14;
+      summaryCardDrawn = true;
     };
     const startPage = () => {
       commands = [];
@@ -1243,7 +1279,7 @@ export class TabsPage implements OnDestroy {
 
       cursorY = pageHeight - (generated ? 118 : 102);
 
-      if (heading === 'Overall Report') {
+      if (payload.period) {
         drawSummaryCard();
       }
 
@@ -1366,7 +1402,9 @@ export class TabsPage implements OnDestroy {
           cursorY -= 16;
         }
 
-        drawSummaryCard();
+        if (!summaryCardDrawn) {
+          drawSummaryCard();
+        }
         pageHasContent = true;
         return;
       }
