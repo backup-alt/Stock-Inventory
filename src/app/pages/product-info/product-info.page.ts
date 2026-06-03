@@ -29,7 +29,6 @@ export class ProductInfoPage implements OnInit, OnDestroy {
   updateNote = '';
   isSavingUpdate = false;
   updateError = '';
-  expandedCategories = new Set<string>();
   private fragmentSubscription?: Subscription;
 
   constructor(
@@ -206,23 +205,38 @@ export class ProductInfoPage implements OnInit, OnDestroy {
     return !this.isSavingUpdate && Boolean(this.selectedCategory && this.selectedProductName());
   }
 
-  toggleCategory(title: string) {
-    const key = this.categoryKey(title);
+  getCategoryRoute(title: string): string {
+    const normalizedTitle = title.toLowerCase();
 
-    if (this.expandedCategories.has(key)) {
-      this.expandedCategories.delete(key);
-      return;
+    if (normalizedTitle.includes('raw')) {
+      return '/tabs/inventory/raw-salt';
     }
 
-    this.expandedCategories.add(key);
-  }
+    if (normalizedTitle.includes('bundle')) {
+      return '/tabs/inventory/bundles';
+    }
 
-  isCategoryExpanded(title: string): boolean {
-    return this.expandedCategories.has(this.categoryKey(title));
-  }
+    if (normalizedTitle.includes('packaging') && normalizedTitle.includes('roll')) {
+      return '/tabs/inventory/packaging-rolls';
+    }
 
-  visibleItemCount(title: string, totalItems: number): number {
-    return this.isCategoryExpanded(title) ? totalItems : 5;
+    if (normalizedTitle.includes('packaging') && normalizedTitle.includes('bag')) {
+      return '/tabs/inventory/packaging-bags';
+    }
+
+    if (normalizedTitle.includes('packaging')) {
+      return '/tabs/inventory/packaging';
+    }
+
+    if (normalizedTitle.includes('consumable')) {
+      return '/tabs/inventory/consumables';
+    }
+
+    if (normalizedTitle.includes('crystalline') || normalizedTitle.includes('crystal')) {
+      return '/tabs/inventory/crystalline';
+    }
+
+    return '/tabs/stock-report';
   }
 
   private syncUpdateForm() {
@@ -249,10 +263,6 @@ export class ProductInfoPage implements OnInit, OnDestroy {
     }
 
     return this.selectedItem?.unit || this.defaultUnitForSelectedCategory();
-  }
-
-  private categoryKey(title: string): string {
-    return title.trim().toLowerCase();
   }
 
   private defaultUnitForSelectedCategory(): string {
