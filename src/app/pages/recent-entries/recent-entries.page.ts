@@ -27,6 +27,12 @@ export class RecentEntriesPage extends DateRangePageBase implements OnInit {
     this.loadData();
   }
 
+  ionViewWillEnter() {
+    if (this.syncFromActiveSelection() && this.data) {
+      this.reloadForDateChange();
+    }
+  }
+
   loadData(refresher?: any) {
     if (!refresher && !this.data) {
       this.isLoading = true;
@@ -54,7 +60,12 @@ export class RecentEntriesPage extends DateRangePageBase implements OnInit {
     setTimeout(() => refresher.target?.complete(), 500);
   }
 
-  protected onDateFilterChanged(): void {
+  private reloadForDateChange() {
+    this.isLoading = true;
     this.loadData();
+  }
+
+  protected onDateFilterChanged(): void {
+    this.reloadForDateChange();
   }
 }

@@ -234,6 +234,7 @@ function dashboardData(stock: any, summary: any, filter: DateFilterParams): Dash
         label: ordersKpiLabel(filter.period),
         value: countRows(reports.orderPlaced),
         icon: 'shopping_cart',
+        footer: `${countRows(reports.orderPlaced)} ${countRows(reports.orderPlaced) === 1 ? 'order' : 'orders'} in selected range`,
       },
       {
         label: 'Deliveries Out',
