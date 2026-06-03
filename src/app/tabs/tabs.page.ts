@@ -19,6 +19,23 @@ interface ReportSection {
   productColumn?: 'PRODUCT GROUP' | 'PRODUCT BRAND';
 }
 
+interface ReportHeadingBlock {
+  type: 'heading';
+  heading: string;
+  subtitle?: string;
+}
+
+interface ReportTableBlock {
+  type: 'table';
+  heading?: string;
+  eyebrow?: string;
+  columns: string[];
+  rows: string[][];
+  totals?: string[];
+}
+
+type ReportBlock = ReportHeadingBlock | ReportTableBlock;
+
 interface ReportPayload {
   title: string;
   generatedAt: string;
@@ -26,6 +43,7 @@ interface ReportPayload {
   period?: string;
   template?: 'summary' | 'inventory';
   sections: ReportSection[];
+  blocks?: ReportBlock[];
 }
 
 @Component({
@@ -353,55 +371,26 @@ export class TabsPage implements OnDestroy {
     const reportFilter = this.currentReportFilter();
     const stockFilter = reportFilter;
     const summaryFilter = reportFilter;
-    const [stockReport, productInfo, productionLog, recentEntries] = await Promise.all([
-      this.safeReportData(firstValueFrom(this.dataService.getStockReport(stockFilter)), { title: 'Stock Report', cards: [] }),
-      this.safeReportData(firstValueFrom(this.dataService.getProductInfo()), {
-        hero: { title: 'Inventory', lotNumber: 'N/A', status: 'N/A' },
-        productionHighlights: { avgMonthlyYield: { value: 0, unit: 'Units' } },
-        inventoryCategories: [],
-        recentEntries: [],
-      }),
-      this.safeReportData(firstValueFrom(this.dataService.getProductionLog(summaryFilter)), { title: 'Production Details', breadcrumb: [], items: [] }),
-      this.safeReportData(firstValueFrom(this.dataService.getRecentEntries(summaryFilter)), { title: 'Recent Stock Entries', breadcrumb: [], items: [] }),
+    const [stockReport, summaryReport] = await Promise.all([
+      this.safeReportData(firstValueFrom(this.dataService.getRawStockReport(stockFilter)), { data: {} }),
+      this.safeReportData(firstValueFrom(this.dataService.getRawSummaryReport(summaryFilter)), { data: { reports: {} } }),
     ]);
-    const rawStock = (stockReport.cards || []).find((card: any) => String(card.title || '').toLowerCase().includes('raw'));
-    const overallLines: string[] = [];
-
-    (productInfo.inventoryCategories || [])
-      .filter((category: any) => !String(category.title || '').toLowerCase().includes('raw stock'))
-      .forEach((category: any) => {
-        const categoryTitle = this.cleanReportText(category.title);
-
-        (category.items || []).forEach((item: any) => {
-          overallLines.push(this.reportRow(`${categoryTitle} - ${item.name}`, item.quantity, item.unit));
-        });
-      });
-    (productionLog.items || []).forEach((item: any) => {
-      overallLines.push(this.reportRow(`Production Output - ${item.productGroup}`, item.quantity, item.unit));
-    });
-    (recentEntries.items || []).forEach((item: any) => {
-      overallLines.push(this.reportRow(`Stock Entries - ${item.productGroup}`, item.quantity, item.unit));
-    });
-    const sections: ReportSection[] = [
-      {
-        heading: 'Stock Report',
-        productColumn: 'PRODUCT GROUP' as const,
-        lines: rawStock ? [this.reportRow('Raw Salt', rawStock.value, rawStock.unit)] : [],
-      },
-      {
-        heading: 'Overall Report',
-        productColumn: 'PRODUCT GROUP' as const,
-        lines: overallLines,
-      },
-    ].filter((section) => section.lines.length > 0);
+    const period = this.formatReportPeriodRange(summaryFilter);
+    const blocks: ReportBlock[] = [
+      { type: 'heading', heading: 'Stock Report' },
+      ...this.stockReportBlocks(stockReport),
+      { type: 'heading', heading: 'Overall Report', subtitle: period },
+      ...this.summaryReportBlocks(summaryReport),
+    ];
 
     return {
       title: 'Overall Report',
       generatedAt: new Date().toLocaleString(),
       source: 'Combined inventory and summary report',
-      period: this.formatReportPeriodRange(summaryFilter),
+      period,
       template: 'inventory',
-      sections,
+      sections: [],
+      blocks,
     };
   }
 
@@ -411,6 +400,250 @@ export class TabsPage implements OnDestroy {
     } catch {
       return fallback;
     }
+  }
+
+  private stockReportBlocks(stock: any): ReportBlock[] {
+    const rawStock = this.rawSaltStock(stock);
+    const blocks: ReportBlock[] = [
+      {
+        type: 'table',
+        heading: 'Raw Stock',
+        eyebrow: 'Live Ledger',
+        columns: ['PRODUCT GROUP', 'QUANTITY', 'UNIT'],
+        rows: rawStock.productGroup
+          ? [[
+              this.cleanReportText(rawStock.productGroup || 'Raw Salt'),
+              this.formatReportQuantity(rawStock.qty),
+              this.displayReportUnit(rawStock.unitName),
+            ]]
+          : [],
+      },
+      { type: 'heading', heading: 'Finished Goods' },
+    ];
+
+    (stock?.data?.finishedGoods || []).forEach((plant: any) => {
+      (plant.groups || []).forEach((group: any) => {
+        const products = group.products || [];
+        blocks.push({
+          type: 'table',
+          heading: this.cleanReportText(plant.plantName || 'Finished Goods'),
+          eyebrow: this.cleanReportText(group.productGroup || 'Products'),
+          totals: this.unitTotals(products),
+          columns: ['PRODUCT BRAND', 'QUANTITY', 'UNIT'],
+          rows: products.map((product: any) => [
+            this.cleanReportText(product.productBrand || product.productGroup),
+            this.formatReportQuantity(product.qty),
+            this.displayReportUnit(product.unitName),
+          ]),
+        });
+      });
+    });
+
+    blocks.push({ type: 'heading', heading: 'Inventory Stock' });
+    (stock?.data?.inventory || []).forEach((category: any) => {
+      const products = category.products || [];
+      blocks.push({
+        type: 'table',
+        heading: this.cleanReportText(category.productName || 'Inventory'),
+        totals: this.unitTotals(products),
+        columns: ['PRODUCT GROUP', 'QUANTITY', 'UNIT'],
+        rows: products.map((product: any) => [
+          this.cleanReportText(product.productGroup),
+          this.formatReportQuantity(product.qty),
+          this.displayReportUnit(product.unitName),
+        ]),
+      });
+    });
+
+    return this.nonEmptyBlocks(blocks);
+  }
+
+  private summaryReportBlocks(summary: any): ReportBlock[] {
+    const reports = summary?.data?.reports || {};
+    const blocks: ReportBlock[] = [
+      ...this.groupedSummaryTables(
+        'Production Output',
+        this.reportRows(reports, 'production', 'productionOutput', 'productionReport'),
+        'PRODUCT BRAND'
+      ),
+      ...this.flatSummaryTables(
+        'Inventory Used Consumed',
+        this.reportRows(reports, 'inventoryUsed', 'inventoryUsedConsumed', 'materialConsumed', 'consumedInventory'),
+        true
+      ),
+      ...this.flatSummaryTables(
+        'Stock Entries',
+        this.reportRows(reports, 'stockEntry', 'stockEntries', 'incomingStock', 'incomingData'),
+        false
+      ),
+      ...this.ordersReportTables(
+        this.reportRows(reports, 'orderPlaced', 'ordersPlaced', 'orders')
+      ),
+    ];
+
+    return this.nonEmptyBlocks(blocks);
+  }
+
+  private groupedSummaryTables(sectionHeading: string, rows: any[], productColumn: string): ReportBlock[] {
+    const blocks: ReportBlock[] = [{ type: 'heading', heading: sectionHeading }];
+    const groupedRows = new Map<string, any[]>();
+
+    rows.forEach((row) => {
+      const key = [
+        this.cleanReportText(row.plantName || 'N/A'),
+        this.cleanReportText(row.productGroup || row.productName || 'Products'),
+      ].join('|');
+      const group = groupedRows.get(key) || [];
+      group.push(row);
+      groupedRows.set(key, group);
+    });
+
+    groupedRows.forEach((groupRows, key) => {
+      const [plantName, productGroup] = key.split('|');
+      blocks.push({
+        type: 'table',
+        heading: plantName === 'N/A' ? productGroup : plantName,
+        eyebrow: productGroup,
+        totals: this.unitTotals(groupRows),
+        columns: [productColumn, 'QUANTITY', 'UNIT'],
+        rows: groupRows.map((row) => [
+          this.cleanReportText(row.productBrand || row.productGroup || row.productName),
+          this.formatReportQuantity(this.reportQuantity(row)),
+          this.displayReportUnit(row.unit || row.unitName),
+        ]),
+      });
+    });
+
+    return blocks;
+  }
+
+  private flatSummaryTables(sectionHeading: string, rows: any[], numbered: boolean): ReportBlock[] {
+    if (!rows.length) {
+      return [];
+    }
+
+    const groups = new Map<string, any[]>();
+    rows.forEach((row) => {
+      const key = this.cleanReportText(row.productName || sectionHeading);
+      const group = groups.get(key) || [];
+      group.push(row);
+      groups.set(key, group);
+    });
+
+    const blocks: ReportBlock[] = [{ type: 'heading', heading: sectionHeading }];
+    groups.forEach((groupRows, productName) => {
+      const columns = numbered
+        ? ['#', 'PRODUCT NAME', 'PRODUCT GROUP', 'BRAND', 'QUANTITY', 'UNIT']
+        : ['PRODUCT GROUP', 'QUANTITY', 'UNIT'];
+      const tableRows = groupRows.map((row, index) => numbered
+        ? [
+            String(index + 1),
+            this.cleanReportText(row.productName || productName),
+            this.cleanReportText(row.productGroup),
+            this.cleanReportText(row.productBrand || '-'),
+            this.formatReportQuantity(this.reportQuantity(row)),
+            this.displayReportUnit(row.unit || row.unitName),
+          ]
+        : [
+            this.cleanReportText(row.productGroup || row.productBrand || row.productName),
+            this.formatReportQuantity(this.reportQuantity(row)),
+            this.displayReportUnit(row.unit || row.unitName),
+          ]);
+
+      blocks.push({
+        type: 'table',
+        heading: productName,
+        totals: this.unitTotals(groupRows),
+        columns,
+        rows: tableRows,
+      });
+    });
+
+    return blocks;
+  }
+
+  private ordersReportTables(rows: any[]): ReportBlock[] {
+    if (!rows.length) {
+      return [];
+    }
+
+    return [
+      { type: 'heading', heading: 'Orders Placed' },
+      {
+        type: 'table',
+        heading: 'Customer Orders',
+        totals: this.unitTotals(rows),
+        columns: ['CUSTOMER', 'PRODUCT', 'QUANTITY', 'UNIT'],
+        rows: rows.map((row) => [
+          this.cleanReportText(row.customerName || row.customer || row.partyName || row.name || 'Customer'),
+          this.cleanReportText(row.productBrand || row.productGroup || row.productName || row.itemName),
+          this.formatReportQuantity(this.reportQuantity(row)),
+          this.displayReportUnit(row.unit || row.unitName),
+        ]),
+      },
+    ];
+  }
+
+  private nonEmptyBlocks(blocks: ReportBlock[]): ReportBlock[] {
+    const result: ReportBlock[] = [];
+
+    blocks.forEach((block) => {
+      if (block.type === 'heading') {
+        result.push(block);
+        return;
+      }
+
+      if (block.rows.length) {
+        result.push(block);
+      }
+    });
+
+    return result.filter((block, index) => {
+      if (block.type !== 'heading') {
+        return true;
+      }
+
+      return Boolean(result[index + 1] && result[index + 1].type !== 'heading');
+    });
+  }
+
+  private reportRows(reports: any, ...keys: string[]): any[] {
+    for (const key of keys) {
+      if (Array.isArray(reports?.[key])) {
+        return reports[key];
+      }
+    }
+
+    return [];
+  }
+
+  private rawSaltStock(source: any): any {
+    const rawStock = source?.data?.rawSaltStock;
+
+    if (Array.isArray(rawStock)) {
+      return rawStock[0] || {};
+    }
+
+    return rawStock || {};
+  }
+
+  private unitTotals(rows: any[]): string[] {
+    const totals = new Map<string, number>();
+
+    rows.forEach((row) => {
+      const unit = this.displayReportUnit(row.unit || row.unitName);
+      const current = totals.get(unit) || 0;
+      totals.set(unit, current + this.reportQuantity(row));
+    });
+
+    return Array.from(totals.entries()).map(([unit, value]) => `${unit} - ${this.formatReportQuantity(value)}`);
+  }
+
+  private reportQuantity(row: any): number {
+    const value = row?.quantity ?? row?.qty ?? row?.totalQuantity ?? row?.stockQty ?? row?.stock;
+    const numeric = Number(String(value ?? '').replace(/,/g, '').replace(/[^\d.-]/g, ''));
+
+    return Number.isFinite(numeric) ? numeric : 0;
   }
 
   private reportRow(product: unknown, quantity: unknown, unit: unknown): string {
@@ -430,6 +663,25 @@ export class TabsPage implements OnDestroy {
     return numeric.toLocaleString('en-US', {
       maximumFractionDigits: 3,
     });
+  }
+
+  private displayReportUnit(value: unknown): string {
+    const unit = this.cleanReportText(value);
+    const normalized = unit.toLowerCase();
+
+    if (normalized === 'piece' || normalized === 'pieces') {
+      return "pc's";
+    }
+
+    if (normalized === 'kilogram' || normalized === 'kilograms') {
+      return 'kg';
+    }
+
+    if (normalized === 'metric ton' || normalized === 'metric tons') {
+      return 'MT';
+    }
+
+    return unit;
   }
 
   private formatReportPeriodRange(filter: DateFilterParams): string {
@@ -743,6 +995,7 @@ export class TabsPage implements OnDestroy {
     const bottomMargin = 42;
     const contentWidth = pageWidth - marginX * 2;
     const sections = (payload.sections || []).filter((section) => section.lines?.length);
+    const structuredBlocks = payload.blocks || [];
     const template = payload.template || 'summary';
     const pages: string[][] = [];
     let commands: string[] = [];
@@ -823,6 +1076,122 @@ export class TabsPage implements OnDestroy {
         status: (status || '').trim(),
       };
     };
+    const tableColumnWidths = (columns: string[]) => {
+      const widths: number[] = columns.map((column) => {
+        const normalized = column.toLowerCase();
+
+        if (normalized === '#') {
+          return 26;
+        }
+
+        if (normalized.includes('quantity')) {
+          return 72;
+        }
+
+        if (normalized === 'unit') {
+          return 92;
+        }
+
+        if (normalized.includes('customer')) {
+          return 116;
+        }
+
+        if (normalized.includes('brand') && columns.length > 3) {
+          return 98;
+        }
+
+        return 0;
+      });
+      const fixedWidth = widths.reduce((sum, width) => sum + width, 0);
+      const flexibleCount = widths.filter((width) => width === 0).length;
+      const flexibleWidth = flexibleCount > 0 ? Math.max(82, (contentWidth - fixedWidth) / flexibleCount) : 0;
+
+      return widths.map((width) => width || flexibleWidth);
+    };
+    const drawHeadingBlock = (block: ReportHeadingBlock) => {
+      ensureSpace(block.subtitle ? 50 : 34);
+      text(block.heading, marginX, cursorY, 18, true, color.ink);
+      cursorY -= 18;
+
+      if (block.subtitle) {
+        text(block.subtitle, marginX, cursorY, 8.5, false, color.muted);
+        cursorY -= 16;
+      }
+
+      cursorY -= 8;
+    };
+    const drawStructuredTable = (block: ReportTableBlock) => {
+      const widths = tableColumnWidths(block.columns);
+      const drawColumnHeader = () => {
+        let x = marginX;
+
+        rect(marginX, cursorY - 2, contentWidth, 18, color.blue);
+        block.columns.forEach((column, index) => {
+          text(column, x + 6, cursorY + 3, 6.5, true, color.white);
+          x += widths[index];
+        });
+        cursorY -= 20;
+      };
+
+      ensureSpace(48);
+
+      if (block.heading) {
+        text(block.heading, marginX, cursorY, 12, true, color.ink);
+
+        if (block.totals?.length) {
+          const totals = `UNIT TOTALS  ${block.totals.join('   ')}`;
+          text(totals, marginX + 285, cursorY, 7.2, true, color.muted);
+        }
+
+        cursorY -= 18;
+      }
+
+      if (block.eyebrow) {
+        rect(marginX, cursorY - 2, contentWidth, 18, color.paleBlue, color.border);
+        text(block.eyebrow.toUpperCase(), marginX + 8, cursorY + 3, 7.4, true, color.ink);
+        cursorY -= 22;
+      }
+
+      drawColumnHeader();
+
+      block.rows.forEach((row, rowIndex) => {
+        const cellLines = row.map((cell, index) => {
+          const limit = Math.max(5, Math.floor((widths[index] || 80) / 4.8));
+          return wrap(cell || '-', limit).slice(0, 3);
+        });
+        const rowHeight = Math.max(23, 10 + Math.max(...cellLines.map((lines) => lines.length), 1) * 10);
+
+        if (cursorY - rowHeight < bottomMargin) {
+          startPage();
+          drawColumnHeader();
+        }
+
+        if (rowIndex % 2 === 0) {
+          rect(marginX, cursorY - rowHeight + 9, contentWidth, rowHeight, color.paleGray);
+        }
+
+        let x = marginX;
+        cellLines.forEach((lines, columnIndex) => {
+          lines.forEach((wrapped, lineIndex) => {
+            const isPrimary = columnIndex === 0 && lineIndex === 0;
+            text(wrapped, x + 6, cursorY - 2 - lineIndex * 10, 7.7, isPrimary, columnIndex === row.length - 1 ? color.muted : color.ink);
+          });
+          x += widths[columnIndex];
+        });
+        line(marginX, cursorY - rowHeight + 7, pageWidth - marginX, cursorY - rowHeight + 7, color.border);
+        cursorY -= rowHeight;
+      });
+
+      cursorY -= 12;
+    };
+    const drawReportBlock = (block: ReportBlock) => {
+      if (block.type === 'heading') {
+        drawHeadingBlock(block);
+        return;
+      }
+
+      drawStructuredTable(block);
+    };
     const drawCards = (section: ReportSection) => {
       drawSectionTitle(section.heading);
       const gap = 10;
@@ -883,7 +1252,11 @@ export class TabsPage implements OnDestroy {
     };
 
     startPage();
-    sections.forEach((section) => drawTable(section));
+    if (structuredBlocks.length) {
+      structuredBlocks.forEach((block) => drawReportBlock(block));
+    } else {
+      sections.forEach((section) => drawTable(section));
+    }
 
     const pageStreams = pages.map((pageCommands, pageIndex) => {
       pageCommands.push('0.35 0.38 0.45 rg');

@@ -90,6 +90,14 @@ export class DataService {
     );
   }
 
+  getRawStockReport(filter?: DateFilterParams): Observable<any> {
+    return this.stockSource(filter ?? this.defaultFilter('daily'));
+  }
+
+  getRawSummaryReport(filter?: DateFilterParams): Observable<any> {
+    return this.summarySource(filter ?? this.defaultFilter('weekly'));
+  }
+
   getProductInfo(): Observable<ProductInfoData> {
     const reportFilter = this.defaultFilter('daily');
 
